@@ -249,9 +249,9 @@ fitStaticWeights <- function(df){
 getTimePoints_RW <- function(next_df){
   
   
-  temp1 <- fitStaticWeights(subset(next_df,Time==1))
+  temp1 <- fitStaticWeights(df = subset(next_df,Time==1))
   temp1$Time <- 1
-  temp2 <- fitStaticWeights(subset(next_df,Time==2))
+  temp2 <- fitStaticWeights(df = subset(next_df,Time==2))
   temp2$Time <- 2
   
   temp <- rbind(temp1,temp2)
