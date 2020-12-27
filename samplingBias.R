@@ -1,9 +1,8 @@
-setwd('C:/Users/db40fysa/Dropbox/CS spatial pattern/MS')
 library(plyr)
 library(ggplot2)
 library(cowplot)
 
-source('C:/Users/db40fysa/Dropbox/CS spatial pattern/MS/spatialBias_functions.R')
+source('C:/Users/db40fysa/Dropbox/CS spatial pattern/MS/urbanBias/spatialBias_functions.R')
 
 ### missing data #########################################################
 
