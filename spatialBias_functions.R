@@ -23,30 +23,21 @@ generateData <- function(M=500,nuSamples=50, beta1=-3,urbanBias=2){
   df$Visits1 <- rep(1,M)
   
   #assume 50% visited - 50% systematic
-  Visits <- 0
-  while(sum(Visits)<50){
-    probVisit <- plogis(0) 
-    Visits <- rbinom(M, 1, probVisit) 
-  }
+  probVisit <- plogis(0) 
+  Visits <- rbinom(M, 1, probVisit) 
   df$Visits2 <- 0
   df$Visits2[sample(which(Visits==1),nuSamples)] <- 1
   
   #assume 50% visited - urban cover overrepresentated
-  Visits <- 0
-  while(sum(Visits)<50){
-    probVisit <- plogis(0 + (urbanBias) * urbanCover) 
-    Visits <- rbinom(M, 1, probVisit) 
-  }
+  probVisit <- plogis(0 + (urbanBias) * urbanCover) 
+  Visits <- rbinom(M, 1, probVisit) 
   df$Visits3 <- 0
   df$Visits3[sample(which(Visits==1),nuSamples)] <- 1
   
   
   #assume 50 visited - urban cover overrepresentated
-  Visits <- 0
-  while(sum(Visits)<50){
-    probVisit <- plogis(0 + (urbanBias) * urbanCover) 
-    Visits <- rbinom(M, 1, probVisit) 
-  }
+  probVisit <- plogis(0 + (urbanBias) * urbanCover) 
+  Visits <- rbinom(M, 1, probVisit) 
   df$Visits4 <- 0
   df$Visits4[sample(which(Visits==1),nuSamples)] <- 1
   
@@ -116,29 +107,20 @@ extendData <- function(df,beta1=-3,urbanBias=2,change="no_change"){
   next_df$Visits1 <- rep(1,M)
   
   #assume 50% visited - 50% systematic
-  Visits <- 0
-  while(sum(Visits)<50){
-    probVisit <- plogis(0) 
-    Visits <- rbinom(M, 1, probVisit) 
-  }
+  probVisit <- plogis(0)
+  Visits <- rbinom(M, 1, probVisit) 
   next_df$Visits2 <- 0
   next_df$Visits2[sample(which(Visits==1),nuSamples)] <- 1
   
   #assume 50% visited - urban cover overrepresentated
-  Visits <- 0
-  while(sum(Visits)<50){
-    probVisit <- plogis(0 + (urbanBias) * next_df$urbanCover) 
-    Visits <- rbinom(M, 1, probVisit) 
-  }
+  probVisit <- plogis(0 + (urbanBias) * next_df$urbanCover) 
+  Visits <- rbinom(M, 1, probVisit) 
   next_df$Visits3 <- 0
   next_df$Visits3[sample(which(Visits==1),nuSamples)] <- 1
   
   #assume 50 visited - urban cover bias increases
-  Visits <- 0
-  while(sum(Visits)<50){
-    probVisit <- plogis(0 + (4 * urbanBias) * next_df$urbanCover) 
-    Visits <- rbinom(M, 1, probVisit) 
-  }
+  probVisit <- plogis(0 + (4 * urbanBias) * next_df$urbanCover) 
+  Visits <- rbinom(M, 1, probVisit) 
   next_df$Visits4 <- 0
   next_df$Visits4[sample(which(Visits==1),nuSamples)] <- 1
   
