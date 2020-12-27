@@ -70,7 +70,7 @@ fitStatic <- function(df){
     data.frame(scenario = i, 
                estimate = sum(predict(glm1,newdata=df,type="response")),
                se = sum(predict(glm1,newdata=df,type="response",se=T)$se.fit),
-               meanUrban = mean(df$urbanCover[df[,paste0("Visits",i)]==1,]))
+               meanUrban = mean(df$urbanCover[df[,paste0("Visits",i)]==1]))
   })
 }
 
