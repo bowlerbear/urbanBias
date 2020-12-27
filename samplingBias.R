@@ -81,13 +81,11 @@ fitStaticWeights(df)
 
 df <- generateData()
 
-next_df <- extendData(df,change="no_change", 
-                      biasChange = "no_change")
-next_df <- extendData(df,change="uniform_change",
-                      biasChange = "no_change")
-next_df <- extendData(df,change="clustered_change",
-                      biasChange = "no_change")
+next_df <- extendData(df,change="no_change")
+next_df <- extendData(df,change="uniform_change")
+next_df <- extendData(df,change="clustered_change")
 
+getTimePoints(next_df)
 plotTimePoints(getTimePoints(next_df))
 fitDynamic(next_df)
 fitStaticWeights(subset(next_df,Time==1))
@@ -154,6 +152,18 @@ g3 <- ggplot(outputCC)+
 
 
 grid1 <- plot_grid(g1,g2,g3,nrow=1)
+
+### urban cover check ######################################
+
+g1 <- ggplot(outputUC)+
+  geom_boxplot(aes(x=scenario,y=meanUrban,fill=Time))+
+  ylim(0,1)+ggtitle('uniform urban change')
+
+g2 <- ggplot(outputCC)+
+  geom_boxplot(aes(x=scenario,y=meanUrban,fill=Time))+
+  ylim(0,1)+ggtitle('clustered urban change')
+
+cowplot::plot_grid(g1,g2,nrow=1)
 
 ### reweight time points ###################################
 
