@@ -167,7 +167,7 @@ cowplot::plot_grid(g1,g2,nrow=1)
 
 ### reweight time points ###################################
 
-outputNC <- ldply(1:300,function(i){
+outputNC <- ldply(1:100,function(i){
   df <- generateData()
   next_df <- extendData(df, change="no_change")
   temp <- getTimePoints_RW(next_df)
@@ -175,7 +175,7 @@ outputNC <- ldply(1:300,function(i){
   return(temp)
 })
 
-outputUC <- ldply(1:300,function(i){
+outputUC <- ldply(1:100,function(i){
   df <- generateData()
   next_df <- extendData(df,change="uniform_change")
   temp <- getTimePoints_RW(next_df)
@@ -184,7 +184,7 @@ outputUC <- ldply(1:300,function(i){
 })
 
 
-outputCC <- ldply(1:300,function(i){
+outputCC <- ldply(1:100,function(i){
   df <- generateData()
   next_df <- extendData(df,change="clustered_change")
   temp <- getTimePoints_RW(next_df)
@@ -226,6 +226,227 @@ g3 <- ggplot(outputCC)+
   ylim(0,0.7)
 
 grid1 <- plot_grid(g1,g2,g3,nrow=1)
+
+### reweighing test ########################################
+
+#reweighting each time point separely
+out <- ldply(1:300,function(i){
+
+df <- generateData()
+
+next_df <- extendData(df, change="uniform_change")
+
+next_df1 <- subset(next_df,Time==1)
+next_df2 <- subset(next_df,Time==2)
+#summary(next_df1$urbanCover)
+#summary(next_df2$urbanCover)
+
+#qplot(urbanCover,VisitPreds2,data=next_df1)+
+#geom_point(aes(x=urbanCover,y=VisitPreds2),
+#           data=next_df2,col="red")
+
+#add weights
+#next_df1 <- getWeights(next_df1)
+#next_df2 <- getWeights(next_df2)
+
+#plot weights
+#qplot(urbanCover,Weights2,data=subset(next_df1,Visits2==1))
+#qplot(urbanCover,Weights2,data=subset(next_df2,Visits2==1))
+#direction of the weighing changes???
+
+temp1 <- ipwpoint(exposure = Visits4, 
+                 family = "binomial", link = "logit",
+                 numerator = ~ 1, denominator = ~ urbanCover, 
+                 data = next_df1)
+next_df1$Weights <- temp1$ipw.weights
+summary(next_df1$Weights)
+
+temp2 <- ipwpoint(exposure = Visits4, 
+                 family = "binomial", link = "logit",
+                 numerator = ~ 1, denominator = ~ urbanCover, 
+                 data = next_df2)
+next_df2$Weights <- temp2$ipw.weights
+summary(next_df2$Weights)
+
+# data.frame(urbanCover1 = next_df$urbanCover[next_df1$Visits2==1],
+#            urbanCover2 = next_df$urbanCover[next_df2$Visits2==1],
+#            Weights1 = Weights1[next_df1$Visits2==1],
+#            Weights2 = Weights2[next_df2$Visits2==1],
+#            simNu=i)
+# ggplot(out)+
+#   geom_line(aes(x=urbanCover1,y=Weights1,group=simNu),
+#             color="black")+
+#   geom_line(aes(x=urbanCover2,y=Weights2,group=simNu),
+#              color="red")
+
+glm1 <- svyglm(z ~ 1,
+               family=binomial,
+               design = svydesign(~ 1, weights = ~ Weights,
+                                  data = subset(next_df1,
+                                                Visits4==1)))
+preds <- as.data.frame(predict(glm1,
+                               newdata=next_df1,type="response",se=T))
+
+temp1 <- data.frame(time = 1, 
+           estimate = sum(preds$response),
+           se = sum(preds$SE),
+           num = temp1$num.mod$coefficients[1],
+           denom1 = temp1$den.mod$coefficients[1],
+           denom2 = temp1$den.mod$coefficients[2])
+
+glm2 <- svyglm(z ~ 1,
+               family=binomial,
+               design = svydesign(~ 1, weights = ~ Weights,
+                                  data = subset(next_df2,
+                                                Visits4==1)))
+preds <- as.data.frame(predict(glm2,
+                               newdata=next_df2,type="response",se=T))
+
+temp2 <- data.frame(time = 2, 
+                    estimate = sum(preds$response),
+                    se = sum(preds$SE),
+                    num = temp2$num.mod$coefficients[1],
+                    denom1 = temp2$den.mod$coefficients[1],
+                    denom2 = temp2$den.mod$coefficients[2])
+
+rbind(temp1,temp2)
+
+})
+
+ggplot(out)+
+  geom_boxplot(aes(x=factor(time),y=estimate))
+
+ggplot(out)+
+  geom_boxplot(aes(x=factor(time),y=num))
+
+ggplot(out)+
+  geom_boxplot(aes(x=factor(time),y=denom1))
+
+ggplot(out)+
+  geom_boxplot(aes(x=factor(time),y=denom2))
+
+#why is there a decrease
+#there should be decrease!! 
+#true change from 250 to 202/3
+
+#slight underestimates with visits3
+#greater understimates with visits4, especially for time point 2
+
+#with standard glm
+out <- ldply(1:300,function(i){
+  
+  df <- generateData()
+  
+  next_df <- extendData(df, change="uniform_change")
+  
+  next_df1 <- subset(next_df,Time==1)
+  next_df2 <- subset(next_df,Time==2)
+  
+  #weights
+  temp <- glm(Visits2 ~ urbanCover, family=binomial, 
+                   data = next_df1)
+  next_df1$Weights <- 1/(predict(temp,type="response"))
+  
+  temp <- glm(Visits2 ~ urbanCover, family=binomial, 
+              data = next_df2)
+  next_df2$Weights <- 1/(predict(temp,type="response"))
+  
+  #glms
+  glm1 <- glm(z ~ 1,family=binomial,weights = Weights,
+              data = subset(next_df1,Visits2==1))
+  preds <- as.data.frame(predict(glm1,newdata=next_df1,type="response",se=T))
+  
+  temp1 <- data.frame(time = 1, 
+                      estimate = sum(preds$fit),
+                      se = sum(preds$se.fit))
+  
+  glm2 <- glm(z ~ 1,family=binomial,weights = Weights,
+              data = subset(next_df2,Visits2==1))
+  preds <- as.data.frame(predict(glm2,newdata=next_df2,type="response",se=T))
+  
+  temp2 <- data.frame(time = 2, 
+                      estimate = sum(preds$fit),
+                      se = sum(preds$se.fit))
+  
+  rbind(temp1,temp2)
+  
+})
+
+ggplot(out)+
+  geom_boxplot(aes(x=factor(time),y=estimate))
+
+#Visit2 - as above
+#Visit4 - same result as above
+
+#deciding weights for both time steps at once
+out <- ldply(1:300,function(i){
+  
+  df <- generateData()
+  
+  next_df <- extendData(df, change="uniform_change")
+  
+  #weights
+  temp <- glm(Visits3 ~ urbanCover, family=binomial, 
+              data = next_df)
+  next_df$Weights <- 1/(predict(temp,type="response"))
+
+  
+  #glm
+  glm1 <- glm(z ~ factor(Time)-1,family=binomial,weights = Weights,
+              data = subset(next_df,Visits3==1))
+  preds <- as.data.frame(predict(glm1,newdata=next_df,type="response",se=T))
+  
+  temp <- data.frame(time = c(1,2), 
+                      estimate = c(sum(preds$fit[next_df$Time==1]),sum(preds$fit[next_df$Time==2])),
+                      se = c(sum(preds$se.fit[next_df$Time==1]),sum(preds$se.fit[next_df$Time==2])))
+  
+  return(temp)
+  
+})
+
+ggplot(out)+
+  geom_boxplot(aes(x=factor(time),y=estimate))
+
+#Visits 4 - same as above - with and without interaction term
+
+#weights decided together using sys
+out <- ldply(1:300,function(i){
+  
+  df <- generateData()
+  
+  next_df <- extendData(df, change="uniform_change")
+  next_df$Time <- as.factor(next_df$Time)
+  
+  temp <- ipwpoint(exposure = Visits3, 
+                   family = "binomial", link = "logit",
+                   numerator = ~ 1, denominator = ~ urbanCover,
+                   data = next_df)
+  next_df$Weights <- temp$ipw.weights
+  
+  
+  glm1 <- svyglm(z ~ Time-1,
+                 family=binomial,
+                 design = svydesign(~ 1, 
+                                    strata = ~ Time,
+                                    weights = ~ Weights,
+                                    data = subset(next_df,
+                                                  Visits3==1)))
+  
+  preds <- as.data.frame(predict(glm1,
+                                 newdata=next_df,type="response",se=T))
+  
+  temp <- data.frame(time = c(1,2), 
+                      estimate = c(sum(preds$response[next_df$Time==1]),sum(preds$response[next_df$Time==2])))
+
+  
+  return(temp)
+  
+})
+
+ggplot(out)+
+  geom_boxplot(aes(x=factor(time),y=estimate))
+
+#https://cran.r-project.org/web/packages/WeightIt/vignettes/WeightIt.html
 
 ### trend plots ############################################
 
