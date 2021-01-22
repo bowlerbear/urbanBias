@@ -4,49 +4,6 @@ library(cowplot)
 
 source('C:/Users/db40fysa/Dropbox/CS spatial pattern/MS/urbanBias/spatialBias_functions.R')
 
-### missing data #########################################################
-
-#site selection as a missing data problem:
-#depend on the response value (species occurrence)
-
-#https://cran.r-project.org/web/views/MissingData.html
-#https://cran.r-project.org/web/packages/ipw/index.html
-#https://blog.usejournal.com/missing-data-its-types-and-statistical-methods-to-deal-with-it-5cf8b71a443f
-
-biodiversityX <- seq(-1,1,length.out=20)
-environmentY <- seq(-1,1,length.out=20)
-fullGrid <- expand.grid(biodiversityX=biodiversityX,
-                        environmentY=environmentY)
-
-#missing completely at random
-fullGrid$MCAR <- plogis(0)
-fullGrid$MCAR <- rbinom(nrow(fullGrid), 1, fullGrid$MCAR)
-
-#missing at random
-fullGrid$MAR <- plogis(0 + 3*fullGrid$environmentY)
-fullGrid$MAR <- rbinom(nrow(fullGrid), 1, fullGrid$MAR)
-
-#missing not at random
-fullGrid$MNAR <- plogis(0 + 3*fullGrid$biodiversityX)
-fullGrid$MNAR <- rbinom(nrow(fullGrid), 1, fullGrid$MNAR)
-
-#draw grid - tile plot with probability that data is missing
-library(tidyverse)
-fullGrid_long <- fullGrid  %>%
-  pivot_longer(cols = starts_with("M"), names_to = "Pattern", values_to = "Visited")
-
-fullGrid_long$Pattern <- factor(fullGrid_long$Pattern,
-                                levels=c("MCAR","MAR","MNAR"))
-fullGrid_long$Visited <- ifelse(fullGrid_long$Visited==1,"Yes","No")
-
-ggplot(fullGrid_long)+
-  geom_tile(aes(x = environmentY, y = biodiversityX,fill=Visited))+
-  facet_wrap(~Pattern,nrow=1)+
-  theme_minimal()+
-  scale_fill_manual(values=c("grey95","black"))+
-  theme(axis.text = element_blank())+
-  xlab("environmental gradient")+ylab("biodiversity gradient")
-
 ### static scenario #######################################################
 
 df <- generateData()
@@ -71,45 +28,46 @@ temp <- ldply(1:300,function(i){
 
 tempRW <- ldply(1:300,function(i){
   df <- generateData()
-  df <- getGLMWeights(df)
-  fitGLMStaticWeights(df)
+  df <- getWeights(df)
+  fitStaticWeights(df)
 })
 
 temp$Type <- "Naive"
 tempRW$Type <- "Reweighted"
-temp <- rbind(temp[,-4],tempRW)
+temp <- rbind(temp,tempRW)
 
 estimatePlot <- ggplot(temp)+
   geom_boxplot(aes(x=factor(scenario),y=estimate/500,
                    fill=Type),
             position = position_dodge(width = 0.5),
-            width=0.4)+
+            width=0.4,
+            outlier.shape = NA)+
   theme_bw()+
+  scale_fill_manual("Analysis",values=c("grey","white"))+
   xlab("sampling scenario")+
   ylab("pred occupancy prop")+
   labs(subtitle = "Estimate")+
-  theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
-  ylim(0,0.8)
+  theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
+        legend.position="top")+
+  ylim(0.1,0.7)
 
 sePlot <- ggplot(temp)+
   geom_boxplot(aes(x=factor(scenario),y=se,
                    fill=Type),
                position = position_dodge(width = 0.5),
-               width=0.4)+
+               width=0.4,
+               outlier.shape = NA)+
   theme_bw()+
+  scale_fill_manual("Analysis",values=c("grey","white"))+
   xlab("sampling scenario")+
-  ylab("SE of pred occupancy")+
+  ylab("SE of total occupancy")+
   labs(subtitle = "SE")+
-  theme(plot.subtitle = element_text(vjust=2,hjust=0.02))
+  theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
+        legend.position="top")+
+  ylim(10,35)
 
-plot_grid(estimatePlot,sePlot,nrow=1)
-
-#original parameters:
-#50% occupancy - but underestimated with reweighted (c.475)
-#with 0.2 higher urban cover - also underestimated
-#with stronger urban bias - underestimated by even more
-#ahhhh
-#still underestimating using GLM instead
+plot_grid(estimatePlot,sePlot,labels=c("A","B"), nrow=1)
+ggsave("plots/static_analysis.png",width=6.5,height=3)
 
 ### dynamic scenario ####################################
 
@@ -244,10 +202,11 @@ g1 <- ggplot(outputNC)+
   geom_violin(aes(x=scenario,y=estimate/500,fill=Time),
               position = position_dodge(width = 0.5))+
   theme_bw()+
-  theme(legend.position = "none")+
+  theme(legend.position = "top")+
+  scale_fill_brewer("Time step",type="seq")+
   xlab("sampling scenario")+
   ylab("pred occupancy prop")+
-  labs(subtitle = "no urban change")+
+  labs(subtitle = "No urban change")+
   theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
   ylim(0,0.7)
 
@@ -255,10 +214,11 @@ g2 <- ggplot(outputUC)+
   geom_violin(aes(x=scenario,y=estimate/500,fill=Time),
               position = position_dodge(width = 0.5))+
   theme_bw()+
-  theme(legend.position = "none")+
+  theme(legend.position = "top")+
+  scale_fill_brewer("Time step",type="seq")+
   xlab("sampling scenario")+
   ylab("pred occupied prop")+
-  labs(subtitle = "uniform urban change")+
+  labs(subtitle = "Uniform urban change")+
   theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
   ylim(0,0.7)
 
@@ -266,10 +226,11 @@ g3 <- ggplot(outputCC)+
   geom_violin(aes(x=scenario,y=estimate/500,fill=Time),
               position = position_dodge(width = 0.5))+
   theme_bw()+
-  theme(legend.position = "none")+
+  theme(legend.position = "top")+
+  scale_fill_brewer("Time step",type="seq")+
   xlab("sampling scenario")+
   ylab("pred occupied prop")+
-  labs(subtitle = "clustered urban change")+
+  labs(subtitle = "Clustered urban change")+
   theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
   ylim(0,0.7)
 
@@ -488,35 +449,39 @@ g3 <- ggplot(outputCC)+
 grid2 <- plot_grid(g1,g2,g3,nrow=1)
 
 plot_grid(grid1,grid2,ncol=1,
-         #labels=c("A - Occupancy proportions in each time step",
-        #          "B - Estimated change"),
-         #hjust = -0.2,
+         labels=c("A",
+                  "B"),
+         vjust =  1,
+         hjust = -0.1,
          align="v")
+
+ggsave("plots/naive_change.png",width=7,height=4.5)
 
 ### power plots ##########################################
 
 p1 <- ggplot(powerNC)+
-  geom_bar(aes(x=scenario,y=nuSigs),stat="identity")+
+  geom_bar(aes(x=scenario,y=nuSigs),stat="identity",fill="grey")+
   theme_bw()+
   xlab("sampling scenario")+
   ylab("Type 1 error rate")+
-  ggtitle("no urban change")
+  labs(subtitle = "No urban change")
 
 p2 <- ggplot(powerUC)+
-  geom_bar(aes(x=scenario,y=(1-nuSigs)),stat="identity")+
+  geom_bar(aes(x=scenario,y=(1-nuSigs)),stat="identity",fill="grey")+
   theme_bw()+
   xlab("sampling scenario")+
   ylab("Type II erorr rate")+
-  ggtitle("uniform urban change")
+  labs(subtitle = "Uniform urban change")
 
 p3 <- ggplot(powerCC)+
-  geom_bar(aes(x=scenario,y=(1-nuSigs)),stat="identity")+
+  geom_bar(aes(x=scenario,y=(1-nuSigs)),stat="identity",fill="grey")+
   theme_bw()+
   xlab("sampling scenario")+
   ylab("Type II error rate")+
-  ggtitle("clustered urban change")
+  labs(subtitle = "Clustered urban change")
 
 plot_grid(p1,p2,p3,nrow=1)
+ggsave("plots/power.png",width=6.5,height=2.5)
 
 ### reweight trends ###########################################
 
@@ -563,5 +528,12 @@ ni <- 10000   ;   nt <- 2   ;   nb <- 5000   ;  nc <- 3
 out1 <- jags(win.data, inits=NULL,params, "Bernoulli_GLM.txt", 
              n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb)
 print(out1$summary, 2)
+
+### things to do: #####
+
+### sampling change
+
+### test effect of including urban bias in detection probability model 
+
 
 ### end ######################################################
