@@ -1,10 +1,10 @@
-generateData <- function(M=500,nuSamples=50, beta1=-3,urbanBias=2){
+generateData <- function(M=500,nuSamples=100, beta1=-3,urbanBias=2){
   
   # M is the number of sites
   #beta1 is the regression coefficient of urban cover
   
   #State process - occupancy is affected by urban cover
-  urbanCover <- seq(-1, 1,length.out=M) 
+  urbanCover <- seq(-1, 1,length.out = M)
   beta0 <- 0  # Logit-scale intercept vegHt
   psi <- plogis(beta0 + beta1 * urbanCover) # Occupancy probability
   #plot(urbanCover, psi, ylim = c(0,1), type = "l", lwd = 3) 
@@ -22,24 +22,20 @@ generateData <- function(M=500,nuSamples=50, beta1=-3,urbanBias=2){
   #assume all sites are visited
   df$Visits1 <- rep(1,M)
   
-  #assume 50% visited - 50% systematic
-  probVisit <- plogis(0) 
-  Visits <- rbinom(M, 1, probVisit) 
-  df$Visits2 <- 0
-  df$Visits2[sample(which(Visits==1),nuSamples)] <- 1
+  #assume % visited - at random
+  probVisit <- rep(plogis(0),M) 
+  Visits <- sample(x = M,size = nuSamples, prob = probVisit)
+  df$Visits2 <- ifelse(df$Site %in% Visits,1,0)
   
-  #assume 50% visited - urban cover overrepresentated
+  #assume % visited - urban cover overrepresentated
   probVisit <- plogis(0 + (urbanBias) * urbanCover) 
-  Visits <- rbinom(M, 1, probVisit) 
-  df$Visits3 <- 0
-  df$Visits3[sample(which(Visits==1),nuSamples)] <- 1
+  Visits <- sample(x = M,size = nuSamples, prob = probVisit)
+  df$Visits3 <- ifelse(df$Site %in% Visits,1,0)
   
-  
-  #assume 50 visited - urban cover overrepresentated
+  #assume % visited - urban cover overrepresentated
   probVisit <- plogis(0 + (urbanBias) * urbanCover) 
-  Visits <- rbinom(M, 1, probVisit) 
-  df$Visits4 <- 0
-  df$Visits4[sample(which(Visits==1),nuSamples)] <- 1
+  Visits <- sample(x = M,size = nuSamples, prob = probVisit)
+  df$Visits4 <- ifelse(df$Site %in% Visits,1,0)
   
   #model visitation probability
   for(i in 1:4){
@@ -60,8 +56,8 @@ fitStatic <- function(df){
     glm1 <- glm(z ~ 1, data = df[df[,paste0("Visits",i)]==1,],family=binomial)
     data.frame(scenario = i, 
                estimate = sum(predict(glm1,newdata=df,type="response")),
-               se = sum(predict(glm1,newdata=df,type="response",se=T)$se.fit),
-               meanUrban = mean(df$urbanCover[df[,paste0("Visits",i)]==1]))
+               se = sum(predict(glm1,newdata=df,type="response",se=T)$se.fit))
+  #meanUrban = mean(df$urbanCover[df[,paste0("Visits",i)]==1]
   })
 }
 
@@ -80,18 +76,17 @@ extendData <- function(df,beta1=-3,urbanBias=2,change="no_change"){
   nuSamples = sum(df$Visits2==1)
   
   #extract data for next time step
-  next_df <- df[,c("Site","urbanCover")]
+  next_df <- unique(df[,c("Site","urbanCover")])
   
   #is there a change in urban cover
   if(change=="no_change"){
     next_df$urbanCover <- next_df$urbanCover
   }else if(change=="uniform_change"){
-    next_df$urbanCover <- next_df$urbanCover  + 0.2
+    next_df$urbanCover <- next_df$urbanCover  + 0.2 
   }else if(change=="clustered_change"){
-    #more urbanization of intermediate urban sites
-    next_df$urbanCover <- sapply(next_df$urbanCover,function(x){
-      ifelse(x>mean(next_df$urbanCover),
-             x+0.4,x)})
+    #more urbanization of high urban sites
+    next_df$urbanCover[next_df$urbanCover>0] <- 
+      next_df$urbanCover[next_df$urbanCover>0] + 0.4
   }
   
 
@@ -106,23 +101,20 @@ extendData <- function(df,beta1=-3,urbanBias=2,change="no_change"){
   #assume all sites are visited
   next_df$Visits1 <- rep(1,M)
   
-  #assume 50% visited - 50% systematic
-  probVisit <- plogis(0)
-  Visits <- rbinom(M, 1, probVisit) 
-  next_df$Visits2 <- 0
-  next_df$Visits2[sample(which(Visits==1),nuSamples)] <- 1
+  #assume % visited - at random
+  probVisit <- rep(plogis(0),M) 
+  Visits <- sample(x = M,size = nuSamples, prob = probVisit)
+  next_df$Visits2 <- ifelse(next_df$Site %in% Visits,1,0)
   
-  #assume 50% visited - urban cover overrepresentated
-  probVisit <- plogis(0 + (urbanBias) * next_df$urbanCover) 
-  Visits <- rbinom(M, 1, probVisit) 
-  next_df$Visits3 <- 0
-  next_df$Visits3[sample(which(Visits==1),nuSamples)] <- 1
+  #assume % visited - urban cover overrepresentated
+  probVisit <- plogis(0 + (urbanBias) * urbanCover) 
+  Visits <- sample(x = M,size = nuSamples, prob = probVisit)
+  next_df$Visits3 <- ifelse(next_df$Site %in% Visits,1,0)
   
-  #assume 50 visited - urban cover bias increases
-  probVisit <- plogis(0 + (4 * urbanBias) * next_df$urbanCover) 
-  Visits <- rbinom(M, 1, probVisit) 
-  next_df$Visits4 <- 0
-  next_df$Visits4[sample(which(Visits==1),nuSamples)] <- 1
+  #assume % visited - urban cover overrepresentated
+  probVisit <- plogis(0 + (2*urbanBias) * urbanCover) 
+  Visits <- sample(x = M,size = nuSamples, prob = probVisit)
+  next_df$Visits4 <- ifelse(next_df$Site %in% Visits,1,0)
   
   #model visitation probability
   for(i in 1:4){
@@ -136,15 +128,34 @@ extendData <- function(df,beta1=-3,urbanBias=2,change="no_change"){
   
 }
 
+# fitDynamic <- function(next_df){
+#   
+#   plyr::ldply(1:4,function(i){
+#     glm1 <- glm(z ~ Time, 
+#                 data = next_df[next_df[,paste0("Visits",i)]==1,],family=binomial)
+#     temp <- data.frame(scenario = i, 
+#                change = summary(glm1)$coefficients[2,1],
+#                change_se = summary(glm1)$coefficients[2,2],
+#                change_p = summary(glm1)$coefficients[2,4])
+#     temp$scenario <- factor(temp$scenario)
+#     return(temp)
+#   })
+#   
+#   
+# }
+
+
 fitDynamic <- function(next_df){
   
+  library(lme4)
+  library(lmerTest)
   plyr::ldply(1:4,function(i){
-    glm1 <- glm(z ~ Time, 
+    glm1 <- glmer(z ~ Time + (1|Site), 
                 data = next_df[next_df[,paste0("Visits",i)]==1,],family=binomial)
     temp <- data.frame(scenario = i, 
-               change = summary(glm1)$coefficients[2,1],
-               change_se = summary(glm1)$coefficients[2,2],
-               change_p = summary(glm1)$coefficients[2,4])
+                       change = summary(glm1)$coefficients[2,1],
+                       change_se = summary(glm1)$coefficients[2,2],
+                       change_p = summary(glm1)$coefficients[2,4])
     temp$scenario <- factor(temp$scenario)
     return(temp)
   })
@@ -206,6 +217,30 @@ getWeights <- function(df){
   
 }
 
+getGLMWeights <- function(df){
+  
+  require(ipw)
+  
+  #scenario 1
+  df$Weights1 <- 1
+  
+  #scenario 2 
+  temp <- glm(Visits2 ~ urbanCover, family="binomial", data=df)
+  df$Weights2 <- 1/(predict(temp,type="response"))
+  
+  #scenario 3 
+  temp <- glm(Visits3 ~ urbanCover, family="binomial", data=df)
+  df$Weights3 <- 1/(predict(temp,type="response"))
+  
+  #scenario 4 
+  temp <- glm(Visits4 ~ urbanCover, family="binomial", data=df)
+  df$Weights4 <- 1/(predict(temp,type="response"))
+  
+  return(df)
+  
+}
+
+
 fitStaticWeights <- function(df){
   
   df <- getWeights(df)
@@ -227,6 +262,28 @@ fitStaticWeights <- function(df){
   })
   
 }
+
+fitGLMStaticWeights <- function(df){
+  
+  df <- getGLMWeights(df)
+  
+  require(survey)
+  
+  plyr::ldply(1:4,function(i){
+    glm1 <- glm(z ~ 1,
+                   family=binomial,
+                   weights = df[df[,paste0("Visits",i)]==1,paste0("Weights",i)],
+                    data = df[df[,paste0("Visits",i)]==1,])
+    
+    preds <- as.data.frame(predict(glm1,newdata=df,type="response",se=T))
+    
+    data.frame(scenario = i, 
+               estimate = sum(preds$fit),
+               se = sum(preds$se.fit))
+  })
+  
+}
+
 
 getTimePoints_RW <- function(next_df){
   
