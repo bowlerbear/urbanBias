@@ -51,12 +51,12 @@ generateData <- function(M=500,nuSamples=100, beta1=-3,urbanBias=2){
 }
 
 fitStatic <- function(df){
-  
+  require(boot)
   plyr::ldply(1:4,function(i){
     glm1 <- glm(z ~ 1, data = df[df[,paste0("Visits",i)]==1,],family=binomial)
     data.frame(scenario = i, 
-               estimate = sum(predict(glm1,newdata=df,type="response")),
-               se = sum(predict(glm1,newdata=df,type="response",se=T)$se.fit))
+               estimate = inv.logit(summary(glm1)$coefficients[1,1]),
+               se = summary(glm1)$coefficients[1,2])
   #meanUrban = mean(df$urbanCover[df[,paste0("Visits",i)]==1]
   })
 }
@@ -107,12 +107,12 @@ extendData <- function(df,beta1=-3,urbanBias=2,change="no_change"){
   next_df$Visits2 <- ifelse(next_df$Site %in% Visits,1,0)
   
   #assume % visited - urban cover overrepresentated
-  probVisit <- plogis(0 + (urbanBias) * urbanCover) 
+  probVisit <- plogis(0 + (urbanBias) * next_df$urbanCover) 
   Visits <- sample(x = M,size = nuSamples, prob = probVisit)
   next_df$Visits3 <- ifelse(next_df$Site %in% Visits,1,0)
   
   #assume % visited - urban cover overrepresentated
-  probVisit <- plogis(0 + (2*urbanBias) * urbanCover) 
+  probVisit <- plogis(0 + (2*urbanBias) * next_df$urbanCover) 
   Visits <- sample(x = M,size = nuSamples, prob = probVisit)
   next_df$Visits4 <- ifelse(next_df$Site %in% Visits,1,0)
   
@@ -143,6 +143,23 @@ extendData <- function(df,beta1=-3,urbanBias=2,change="no_change"){
 #   
 #   
 # }
+
+
+fitDynamicS <- function(next_df){
+  
+  plyr::ldply(1:4,function(i){
+    glm1 <- glm(z ~ factor(Time), 
+                  data = next_df[next_df[,paste0("Visits",i)]==1,],family=binomial)
+    temp <- data.frame(scenario = i, 
+                       change = summary(glm1)$coefficients[2,1],
+                       change_se = summary(glm1)$coefficients[2,2],
+                       change_p = summary(glm1)$coefficients[2,4])
+    temp$scenario <- factor(temp$scenario)
+    return(temp)
+  })
+  
+  
+}
 
 
 fitDynamic <- function(next_df){
@@ -248,17 +265,17 @@ fitStaticWeights <- function(df){
   require(survey)
   
   plyr::ldply(1:4,function(i){
-    glm1 <- svyglm(z ~ 1,
+    sglm1 <- svyglm(z ~ 1,
                    family=binomial,
                    design = svydesign(~ 1, 
                                       weights = ~ df[df[,paste0("Visits",i)]==1,paste0("Weights",i)],
                                       data = df[df[,paste0("Visits",i)]==1,]))
     
-    preds <- as.data.frame(predict(glm1,newdata=df,type="response",se=T))
-    
+    #preds <- as.data.frame(predict(glm1,newdata=df,type="response",se=T))
+    require(boot)
     data.frame(scenario = i, 
-               estimate = sum(preds$response),
-               se = sum(preds$SE))
+               estimate = inv.logit(summary(sglm1)$coefficients[1,1]),
+               se = summary(sglm1)$coefficients[1,2])
   })
   
 }
@@ -300,5 +317,203 @@ getTimePoints_RW <- function(next_df){
   #relabel the scenarios
   
   return(temp)
+  
+}
+
+fitDynamicWeights <- function(next_df){
+  
+  #get weights for each time point
+  temp1 <- getWeights(df = subset(next_df,Time==1))
+  temp2 <- getWeights(df = subset(next_df,Time==2))
+  next_df <- rbind(temp1,temp2)
+  
+  library(lme4)
+  library(lmerTest)
+  plyr::ldply(1:4,function(i){
+    lmer1 <- glmer(z ~ Time + (1|Site), 
+                  family=binomial,
+                  weights = next_df[df[,paste0("Visits",i)]==1,paste0("Weights",i)],
+                  data = next_df[next_df[,paste0("Visits",i)]==1,])
+    
+    #get robust standard errors
+    #require(merDeriv)
+    #temp <- bread.glmerMod(lmer1,full=FALSE)
+    #sqrt(diag(temp))
+    
+    temp <- data.frame(scenario = i, 
+                       change = summary(lmer1)$coefficients[2,1],
+                       change_se = summary(lmer1)$coefficients[2,2],
+                       change_p = summary(lmer1)$coefficients[2,4])
+    
+    temp$scenario <- factor(temp$scenario)
+    return(temp)
+  })
+  
+  
+}
+
+getRepeatSurveys <- function(df,meanP=0.5,nuReps=5){
+  
+  # Choose parameter values for measurement error model and compute detectability
+  require(boot)
+  alpha0 <- logit(meanP)                       # Logit-scale intercept
+  #alpha1 <- -3                         # Logit-scale slope
+  p <- plogis(alpha0)                   # Detection probability c. 20%
+
+  # Take J = nuReps presence/absence measurements at each site
+  df$y <- rbinom(nrow(df),nuReps,p)*df$z
+
+  
+  #return section of the data frame that we will need
+  df[,c("Site","urbanCover","psi","z","y","Visits1","Visits2","Visits3","Visits4","Time")]
+  
+}
+
+
+fitStaticOccuModel <- function(df,model="simulation_bias_intercepts.txt"){
+  
+#defined in previous function - check it doesnt change  
+nuReps = 5  
+
+myfun <- function(i = 1){
+
+#set y to NAs when visited = 0
+df$y_Visits <- df$y
+df$y_Visits[df[,paste0("Visits",i)]==0] <- NA
+
+#format for jags
+require(rjags)
+require(jagsUI)
+jags.data = list(n.site=nrow(df),
+                 J = nuReps,
+                 y = df$y_Visits,
+                 covariate = df$urbanCover)
+
+
+# Initial values
+zst <- ifelse(jags.data$y>0,1,0)  
+zst[is.na(zst)] <- 0
+inits <- function(){list(z = zst)}
+
+# Parameters monitored
+params <- c("p.int", "psi.int","psi.fs") 
+
+# MCMC settings
+ni <- 500   ;   nt <- 2   ;   nb <- 200   ;   nc <- 3
+
+# fit model
+out1 <- jags(jags.data, inits, params, 
+             model, 
+             n.chains = nc,n.thin = nt, 
+             n.iter = ni, n.burnin = nb,
+             parallel = T) 
+
+out1$summary
+
+#export like this
+data.frame(scenario = i, 
+           estimate = out1$mean$psi.fs,
+           se = out1$sd$psi.fs)
+}
+
+require(plyr)
+ldply(1:4,function(i)myfun(i))
+  
+}
+
+plotEffects <- function(output){
+  
+  ggplot(output)+
+    geom_violin(aes(x=factor(scenario),y=estimate))+
+    xlab("scenario")+theme_few()
+  
+}
+
+plotChange <- function(next_df){
+  
+  next_df_time1 <- subset(next_df,Time==1)
+  next_df_time2 <- subset(next_df,Time==2)
+  names(next_df_time1) <- paste0(names(next_df_time1),"_Time1")
+  names(next_df_time2) <- paste0(names(next_df_time2),"_Time2")
+  allTimes <- cbind(next_df_time1,next_df_time2)
+  allTimes$urbanChange <- allTimes$urbanCover_Time2 - allTimes$urbanCover_Time1
+  
+  #plot for each scenario
+  allTimes$repeatSurvey <- ifelse(allTimes$Visits2_Time1==1 & allTimes$Visits2_Time2 == 1,1,0)
+  g1 <- ggplot(allTimes,aes(x=urbanChange,y=repeatSurvey))+ylim(0,1)+
+    geom_smooth(method = "glm", method.args = list(family = "binomial"))+ggtitle("scenario 2")
+  
+  allTimes$repeatSurvey <- ifelse(allTimes$Visits3_Time1==1 & allTimes$Visits3_Time2 == 1,1,0)
+  g2 <- ggplot(allTimes,aes(x=urbanChange,y=repeatSurvey))+ylim(0,1)+
+    geom_smooth(method = "glm", method.args = list(family = "binomial"))+ggtitle("scenario 3")
+  
+  allTimes$repeatSurvey <- ifelse(allTimes$Visits4_Time1==1 & allTimes$Visits4_Time2 == 1,1,0)
+  g3 <- ggplot(allTimes,aes(x=urbanChange,y=repeatSurvey))+ylim(0,1)+
+    geom_smooth(method = "glm", method.args = list(family = "binomial"))+ggtitle("scenario 4")
+  
+  cowplot::plot_grid(g1,g2,g3,nrow=1)
+}
+
+
+
+getObsProp <- function(next_df){
+  data.frame(Visit1_Time1_prop = mean(next_df$z[next_df$Visits1==1 & next_df$Time==1]),
+             Visit2_Time1_prop = mean(next_df$z[next_df$Visits2==1 & next_df$Time==1]),
+             Visit3_Time1_prop = mean(next_df$z[next_df$Visits3==1 & next_df$Time==1]),
+             Visit4_Time1_prop = mean(next_df$z[next_df$Visits4==1 & next_df$Time==1]),
+             Visit1_Time2_prop = mean(next_df$z[next_df$Visits1==1 & next_df$Time==2]),
+             Visit2_Time2_prop = mean(next_df$z[next_df$Visits2==1 & next_df$Time==2]),
+             Visit3_Time2_prop = mean(next_df$z[next_df$Visits3==1 & next_df$Time==2]),
+             Visit4_Time2_prop = mean(next_df$z[next_df$Visits4==1 & next_df$Time==2]))
+}
+
+
+plotObsProp <- function(outputNC,mytitle){
+  
+  outputNC_melt <- reshape2::melt(outputNC)
+  outputNC_melt$scenario <- sapply(as.character(outputNC_melt$variable),function(x){
+    strsplit(x,"_")[[1]][1]})
+  outputNC_melt$time <- sapply(as.character(outputNC_melt$variable),function(x){
+    strsplit(x,"_")[[1]][2]})
+  outputNC_melt$time <- ifelse(outputNC_melt$time=="Time1","1","2")
+  
+  ggplot(outputNC_melt,aes(x=scenario,y=value,fill=time))+
+    geom_violin(position="dodge",draw_quantiles=c(0.25,0.5,0.75),
+                alpha=0.5)+
+    theme_few()+
+    scale_fill_manual("Time point", values = c("lightblue","blue"))+
+    scale_x_discrete("Sampling scenario", labels = c("Visit1" = "Full","Visit2" = "Random",
+                                       "Visit3" = "Bias","Visit4" = "Bias+"))+
+    ylab("Occupancy proportion")+
+    theme(legend.position = c(0.85,0.85),legend.key.size=unit(0.5,"line"),
+          legend.title = (element_text(size=10)))+
+    labs(subtitle = mytitle)
+    
+}
+
+
+plotObsChange <- function(outputNC){
+  
+  outputNC$simNu <- 1:nrow(outputNC)
+  outputNC_melt <- reshape2::melt(outputNC,id="simNu")
+  outputNC_melt$scenario <- sapply(as.character(outputNC_melt$variable),function(x){
+    strsplit(x,"_")[[1]][1]})
+  outputNC_melt$time <- sapply(as.character(outputNC_melt$variable),function(x){
+    strsplit(x,"_")[[1]][2]})
+  outputNC_cast <- reshape2::dcast(outputNC_melt,simNu+scenario~time,value.var="value")
+  
+  outputNC_cast$Difference <- outputNC_cast$Time2 -  outputNC_cast$Time1
+  require(boot)
+  outputNC_cast$Difference2 <- logit(outputNC_cast$Time2) - logit(outputNC_cast$Time1)
+  outputNC_cast$Difference2 <- outputNC_cast$Time2/outputNC_cast$Time1
+  
+  ggplot(outputNC_cast,aes(x=scenario,y=Difference2))+
+    geom_violin(position="dodge",draw_quantiles=c(0.25,0.5,0.75),
+                alpha=0.5)+
+    theme_few()+
+    scale_x_discrete("Sampling scenario", labels = c("Visit1" = "Full","Visit2" = "Random",
+                                                     "Visit3" = "Bias","Visit4" = "Bias+"))+
+    ylab("Occupancy change")+
+    geom_hline(yintercept=1,linetype="dashed")
   
 }
