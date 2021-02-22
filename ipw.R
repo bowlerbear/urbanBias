@@ -73,3 +73,12 @@ jtools::get_robust_se(lm1,type="HC3")#HC1 returns the same as survey_glm
 
 #weights in a glmm
 library(lme4)
+
+#BBS survey trend using maximum likelihood estimation with survey weights
+library(survey)
+bbs_design <- svydesign(ids = ~1, weights = ~weight, data = bbs_counts)
+bbs_trend <- svyglm(count ~ year_factor + square, design = bbs_design, family=poisson)
+
+#BBS survey trend using Bayesian weighted likelihood approach
+library(brms)
+bbs_trend_brms <- brm(count|weights(weight, scale = TRUE) ~ year_factor + square - 1, data = bbs_pf_counts, family = poisson)
