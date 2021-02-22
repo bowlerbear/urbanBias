@@ -1,8 +1,17 @@
 library(plyr)
 library(ggplot2)
 library(cowplot)
+library(ggthemes)
 
 source('C:/Users/db40fysa/Dropbox/CS spatial pattern/MS/urbanBias/spatialBias_functions.R')
+
+#test the effect of the following possible options 
+#- include covariate in state model (i.e. predict response at unsampled sites based on pattern in response at sampled sites)
+#- include covariate in new site visitation model (i.e., predict which sites are overrepresented and downweight them)
+#- which is better???
+
+#as above:
+#- include geographic coordinates as proxy for the covariate
 
 ### static scenario #######################################################
 
@@ -20,36 +29,37 @@ fitStatic(df)
 df <- getWeights(df)
 fitStaticWeights(df)
 
-temp <- ldply(1:300,function(i){
+temp <- ldply(1:1000,function(i){
   df <- generateData()
   df <- getWeights(df)
   fitStatic(df)
 })
 
-tempRW <- ldply(1:300,function(i){
+tempRW <- ldply(1:1000,function(i){
   df <- generateData()
   df <- getWeights(df)
   fitStaticWeights(df)
 })
 
-temp$Type <- "Naive"
+temp$Type <- "Simple"
 tempRW$Type <- "Reweighted"
 temp <- rbind(temp,tempRW)
 
 estimatePlot <- ggplot(temp)+
-  geom_boxplot(aes(x=factor(scenario),y=estimate/500,
+  geom_violin(aes(x=factor(scenario),y=estimate,
                    fill=Type),
             position = position_dodge(width = 0.5),
-            width=0.4,
-            outlier.shape = NA)+
+            draw_quantiles = c(0.25,0.5,0.75))+
   theme_bw()+
   scale_fill_manual("Analysis",values=c("grey","white"))+
   xlab("sampling scenario")+
-  ylab("pred occupancy prop")+
-  labs(subtitle = "Estimate")+
+  ylab("Predicted occupancy")+
+  theme_few()+
   theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
-        legend.position="top")+
-  ylim(0.1,0.7)
+        legend.position=c(0.1,0.9))+
+  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
+                                                   "3" = "Bias","4" = "Bias+"))
+  
 
 sePlot <- ggplot(temp)+
   geom_boxplot(aes(x=factor(scenario),y=se,
@@ -69,6 +79,67 @@ sePlot <- ggplot(temp)+
 plot_grid(estimatePlot,sePlot,labels=c("A","B"), nrow=1)
 ggsave("plots/static_analysis.png",width=6.5,height=3)
 
+### second time point ##################################
+
+df <- getWeights(df)
+fitStaticWeights(df)
+
+temp <- ldply(1:1000,function(i){
+  df <- generateData()
+  df <- extendData(df)
+  df <- subset(df,Time==2)
+  df <- getWeights(df)
+  fitStatic(df)
+})
+
+tempRW <- ldply(1:1000,function(i){
+  df <- generateData()
+  df <- extendData(df)
+  df <- subset(df,Time==2)
+  df <- getWeights(df)
+  fitStaticWeights(df)
+})
+
+temp$Type <- "Simple"
+tempRW$Type <- "Reweighted"
+temp <- rbind(temp,tempRW)
+
+estimatePlot <- ggplot(temp)+
+  geom_violin(aes(x=factor(scenario),y=estimate,
+                  fill=Type),
+              position = position_dodge(width = 0.5),
+              draw_quantiles = c(0.25,0.5,0.75))+
+  theme_bw()+
+  scale_fill_manual("Analysis",values=c("grey","white"))+
+  xlab("sampling scenario")+
+  ylab("Predicted occupancy")+
+  theme_few()+
+  theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
+        legend.position=c(0.15,0.88))+
+  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
+                                                   "3" = "Bias","4" = "Bias+"))
+
+sePlot <- ggplot(temp)+
+  geom_violin(aes(x=factor(scenario),y=se,
+                  fill=Type),
+              position = position_dodge(width = 0.75),
+              draw_quantiles = c(0.25,0.5,0.75),
+              trim = TRUE, scale="width")+
+  theme_bw()+
+  scale_fill_manual("Analysis",values=c("grey","white"))+
+  xlab("sampling scenario")+
+  ylab("Predicted occupancy SE")+
+  theme_few()+
+  theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
+        legend.position=c(0.15,0.88))+
+  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
+                                                   "3" = "Bias","4" = "Bias+"))
+
+plot_grid(estimatePlot,sePlot,labels=c("A","B"), nrow=1)
+ggsave("plots/static_analysis_second.png",width=10.5,height=4.5)
+
+#repeat also for the other types of urban change.
+
 ### dynamic scenario ####################################
 
 #urban change scenario
@@ -83,8 +154,6 @@ ggsave("plots/static_analysis.png",width=6.5,height=3)
 #(1) additional time step
 #(2) additional time steps and higher urban bias in second time step
 
-### dynamic run #############################################
-
 df <- generateData()
 
 next_df <- extendData(df,change="no_change")
@@ -96,9 +165,65 @@ plotTimePoints(getTimePoints(next_df))
 fitDynamic(next_df)
 fitStaticWeights(subset(next_df,Time==1))
 
-### replicate sims #########################################
+### sampling change #######################################
 
-outputNC <- ldply(1:300,function(i){
+df <- generateData()
+next_df <- extendData(df,change="clustered_change")#only variation in change with this option
+plotChange(next_df)
+
+### observed change ###################################
+
+outputNC <- ldply(1:1000,function(i){
+  
+  df <- generateData()
+  next_df <- extendData(df,change="no_change")
+  #get proportion of sites observed to be occupied
+  getObsProp(next_df)
+  
+})
+q1 <- plotObsProp(outputNC,mytitle="No urban change")
+g1 <- plotObsChange(outputNC)
+
+outputUC <- ldply(1:1000,function(i){
+  
+  df <- generateData()
+  next_df <- extendData(df,change="uniform_change")
+  #get proportion of sites observed to be occupied
+  getObsProp(next_df)
+  
+})
+q2 <- plotObsProp(outputUC,mytitle="Uniform urban change")
+g2 <- plotObsChange(outputUC)
+
+outputCC <- ldply(1:1000,function(i){
+  
+  df <- generateData()
+  next_df <- extendData(df,change="clustered_change")
+  #get proportion of sites observed to be occupied
+  getObsProp(next_df)
+  
+})
+q3 <- plotObsProp(outputCC,mytitle="Clustered urban change")
+g3 <- plotObsChange(outputCC)
+
+
+plot1 <- plot_grid(q1,q2,q3,nrow=1)
+plot2 <- plot_grid(g1,g2,g3,nrow=1)
+
+plot_grid(plot1,plot2,ncol=1,align='v',
+          labels=c("A","B"),
+          vjust=1)
+
+ggsave("plots/Obs_change.png",width=10.5,height=6)
+
+#absolute difference varies
+#logit difference also varies
+#but relative (ratio) change in the same
+#for 1 to 3 under uniform change
+
+### naive time points #########################################
+
+outputNC <- ldply(1:500,function(i){
   df <- generateData()
   next_df <- extendData(df, change="no_change")
   temp <- getTimePoints(next_df)
@@ -106,7 +231,7 @@ outputNC <- ldply(1:300,function(i){
   return(temp)
 })
 
-outputUC <- ldply(1:300,function(i){
+outputUC <- ldply(1:500,function(i){
   df <- generateData()
   next_df <- extendData(df,change="uniform_change")
   temp <- getTimePoints(next_df)
@@ -115,7 +240,7 @@ outputUC <- ldply(1:300,function(i){
 })
 
 
-outputCC <- ldply(1:300,function(i){
+outputCC <- ldply(1:500,function(i){
   df <- generateData()
   next_df <- extendData(df,change="clustered_change")
   temp <- getTimePoints(next_df)
@@ -124,7 +249,7 @@ outputCC <- ldply(1:300,function(i){
 })
 
 g1 <- ggplot(outputNC)+
-  geom_violin(aes(x=scenario,y=estimate/500,fill=Time),
+  geom_violin(aes(x=scenario,y=estimate,fill=Time),
               position = position_dodge(width = 0.5))+
               theme_bw()+
               theme(legend.position = "none")+
@@ -135,7 +260,7 @@ g1 <- ggplot(outputNC)+
               ylim(0,0.7)
 
 g2 <- ggplot(outputUC)+
-  geom_violin(aes(x=scenario,y=estimate/500,fill=Time),
+  geom_violin(aes(x=scenario,y=estimate,fill=Time),
               position = position_dodge(width = 0.5))+
               theme_bw()+
               theme(legend.position = "none")+
@@ -146,7 +271,7 @@ g2 <- ggplot(outputUC)+
               ylim(0,0.7)
 
 g3 <- ggplot(outputCC)+
-  geom_violin(aes(x=scenario,y=estimate/500,fill=Time),
+  geom_violin(aes(x=scenario,y=estimate,fill=Time),
               position = position_dodge(width = 0.5))+
               theme_bw()+
               theme(legend.position = "none")+
@@ -158,18 +283,6 @@ g3 <- ggplot(outputCC)+
 
 
 grid1 <- plot_grid(g1,g2,g3,nrow=1)
-
-### urban cover check ######################################
-
-g1 <- ggplot(outputUC)+
-  geom_boxplot(aes(x=scenario,y=meanUrban,fill=Time))+
-  ylim(0,1)+ggtitle('uniform urban change')
-
-g2 <- ggplot(outputCC)+
-  geom_boxplot(aes(x=scenario,y=meanUrban,fill=Time))+
-  ylim(0,1)+ggtitle('clustered urban change')
-
-cowplot::plot_grid(g1,g2,nrow=1)
 
 ### reweight time points ###################################
 
@@ -234,187 +347,26 @@ g3 <- ggplot(outputCC)+
   theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
   ylim(0,0.7)
 
-grid1 <- plot_grid(g1,g2,g3,nrow=1)
+plot_grid(g1,g2,g3,nrow=1)
 
-### reweighing test ########################################
-
-#reweighting each time point separely
-out <- ldply(1:300,function(i){
-
-df <- generateData()
-
-next_df <- extendData(df, change="uniform_change")
-
-next_df1 <- subset(next_df,Time==1)
-next_df2 <- subset(next_df,Time==2)
-
-summary(next_df1$urbanCover)
-summary(next_df2$urbanCover)
-
-#qplot(urbanCover,VisitPreds2,data=next_df1)+
-#geom_point(aes(x=urbanCover,y=VisitPreds2),
-#           data=next_df2,col="red")
-
-#add weights
-next_df1 <- getWeights(next_df1)
-next_df2 <- getWeights(next_df2)
-
-#plot weights
-qplot(urbanCover,Weights4,data=subset(next_df1,Visits4==1))
-qplot(urbanCover,Weights4,data=subset(next_df1,Visits4==0))
-qplot(urbanCover,Weights4,data=subset(next_df2,Visits4==1))
-qplot(urbanCover,Weights4,data=subset(next_df2,Visits4==0))
-#direction of the weighing changes???
-
-#weighting changes...
-
-temp1 <- ipwpoint(exposure = Visits4, 
-                 family = "binomial", link = "logit",
-                 numerator = ~ 1, denominator = ~ urbanCover, 
-                 data = next_df1)
-next_df1$Weights <- temp1$ipw.weights
-summary(next_df1$Weights)
-
-temp2 <- ipwpoint(exposure = Visits4, 
-                 family = "binomial", link = "logit",
-                 numerator = ~ 1, denominator = ~ urbanCover, 
-                 data = next_df2)
-next_df2$Weights <- temp2$ipw.weights
-summary(next_df2$Weights)
-
-# data.frame(urbanCover1 = next_df$urbanCover[next_df1$Visits2==1],
-#            urbanCover2 = next_df$urbanCover[next_df2$Visits2==1],
-#            Weights1 = Weights1[next_df1$Visits2==1],
-#            Weights2 = Weights2[next_df2$Visits2==1],
-#            simNu=i)
-# ggplot(out)+
-#   geom_line(aes(x=urbanCover1,y=Weights1,group=simNu),
-#             color="black")+
-#   geom_line(aes(x=urbanCover2,y=Weights2,group=simNu),
-#              color="red")
-
-glm1 <- svyglm(z ~ 1,
-               family=binomial,
-               design = svydesign(~ 1, weights = ~ Weights,
-                                  data = subset(next_df1,
-                                                Visits4==1)))
-preds <- as.data.frame(predict(glm1,
-                               newdata=next_df1,type="response",se=T))
-
-temp1 <- data.frame(time = 1, 
-           estimate = sum(preds$response),
-           se = sum(preds$SE),
-           nuVisits = sum(next_df1$Visits4==1),
-           num = temp1$num.mod$coefficients[1],
-           denom1 = temp1$den.mod$coefficients[1],
-           denom2 = temp1$den.mod$coefficients[2])
-
-glm2 <- svyglm(z ~ 1,
-               family=binomial,
-               design = svydesign(~ 1, weights = ~ Weights,
-                                  data = subset(next_df2,
-                                                Visits4==1)))
-preds <- as.data.frame(predict(glm2,
-                               newdata=next_df2,type="response",se=T))
-
-temp2 <- data.frame(time = 2, 
-                    estimate = sum(preds$response),
-                    se = sum(preds$SE),
-                    nuVisits = sum(next_df2$Visits4==1),
-                    num = temp2$num.mod$coefficients[1],
-                    denom1 = temp2$den.mod$coefficients[1],
-                    denom2 = temp2$den.mod$coefficients[2])
-
-rbind(temp1,temp2)
-
-})
-
-ggplot(out)+
-  geom_boxplot(aes(x=factor(time),y=nuVisits))#50 visits each time
-
-ggplot(out)+
-  geom_boxplot(aes(x=factor(time),y=estimate))
-
-ggplot(out)+
-  geom_boxplot(aes(x=factor(time),y=num))
-
-ggplot(out)+
-  geom_boxplot(aes(x=factor(time),y=denom1))
-
-ggplot(out)+
-  geom_boxplot(aes(x=factor(time),y=denom2))
-
-#why is there a decrease
-#there should be decrease!! 
-#true change from 250 to 202/3
-
-#slight underestimates with visits3
-#greater understimates with visits4, especially for time point 2
-
-#with standard glm
-out <- ldply(1:300,function(i){
-  
-  df <- generateData()
-  
-  next_df <- extendData(df, change="uniform_change")
-  
-  next_df1 <- subset(next_df,Time==1)
-  next_df2 <- subset(next_df,Time==2)
-  
-  #weights
-  temp <- glm(Visits2 ~ urbanCover, family=binomial, 
-                   data = next_df1)
-  next_df1$Weights <- 1/(predict(temp,type="response"))
-  
-  temp <- glm(Visits2 ~ urbanCover, family=binomial, 
-              data = next_df2)
-  next_df2$Weights <- 1/(predict(temp,type="response"))
-  
-  #glms
-  glm1 <- glm(z ~ 1,family=binomial,weights = Weights,
-              data = subset(next_df1,Visits2==1))
-  preds <- as.data.frame(predict(glm1,newdata=next_df1,type="response",se=T))
-  
-  temp1 <- data.frame(time = 1, 
-                      estimate = sum(preds$fit),
-                      se = sum(preds$se.fit))
-  
-  glm2 <- glm(z ~ 1,family=binomial,weights = Weights,
-              data = subset(next_df2,Visits2==1))
-  preds <- as.data.frame(predict(glm2,newdata=next_df2,type="response",se=T))
-  
-  temp2 <- data.frame(time = 2, 
-                      estimate = sum(preds$fit),
-                      se = sum(preds$se.fit))
-  
-  rbind(temp1,temp2)
-  
-})
-
-ggplot(out)+
-  geom_boxplot(aes(x=factor(time),y=estimate))
-
-#Visit2 - as above
-#Visit4 - same result as above
-
-### trend plots ############################################
+### trends ############################################
 
 #no change in bias
-outputNC <- ldply(1:300,function(i){
+outputNC <- ldply(1:1000,function(i){
   df <- generateData()
   next_df <- extendData(df, change="no_change")
   fitDynamic(next_df)
 })
 powerNC <- ddply(outputNC,"scenario",summarise,nuSigs=mean(change_p<0.05))
 
-outputUC <- ldply(1:300,function(i){
+outputUC <- ldply(1:1000,function(i){
   df <- generateData()
   next_df <- extendData(df, change="uniform_change")
   fitDynamic(next_df)
 })
 powerUC <- ddply(outputUC,"scenario",summarise,nuSigs=mean(change_p<0.05))
 
-outputCC <- ldply(1:300,function(i){
+outputCC <- ldply(1:1000,function(i){
   df <- generateData()
   next_df <- extendData(df, change="clustered_change")
   fitDynamic(next_df)
@@ -422,42 +374,33 @@ outputCC <- ldply(1:300,function(i){
 powerCC <- ddply(outputCC,"scenario",summarise,nuSigs=mean(change_p<0.05))
 
 g1 <- ggplot(outputNC)+
-  geom_boxplot(aes(x=scenario,y=change),outlier.shape = NA)+
+  geom_violin(aes(x=scenario,y=change),trim = TRUE)+
   theme_bw()+
   theme(legend.position = "none")+
   geom_hline(yintercept=0,linetype="dashed")+
   xlab("sampling scenario")+ylab("change estimate")+
-  ylim(-1.3,0.3)
+  ylim(-2,2)
 
 
 g2 <- ggplot(outputUC)+
-  geom_boxplot(aes(x=scenario,y=change),outlier.shape = NA)+
+  geom_violin(aes(x=scenario,y=change),trim = TRUE)+
   theme_bw()+
   theme(legend.position = "none")+
   geom_hline(yintercept=0,linetype="dashed")+
   xlab("sampling scenario")+ylab("change estimate")+
-  ylim(-1.3,0.3)
+  ylim(-2,2)
 
 g3 <- ggplot(outputCC)+
-  geom_boxplot(aes(x=scenario,y=change),outlier.shape = NA)+
+  geom_violin(aes(x=scenario,y=change),trim = TRUE)+
   theme_bw()+
   theme(legend.position = "none")+
   geom_hline(yintercept=0,linetype="dashed")+
   xlab("sampling scenario")+ylab("change estimate")+
-  ylim(-1.3,0.3)
+  ylim(-2,2)
 
-grid2 <- plot_grid(g1,g2,g3,nrow=1)
+plot_grid(g1,g2,g3,nrow=1)
 
-plot_grid(grid1,grid2,ncol=1,
-         labels=c("A",
-                  "B"),
-         vjust =  1,
-         hjust = -0.1,
-         align="v")
-
-ggsave("plots/naive_change.png",width=7,height=4.5)
-
-### power plots ##########################################
+### power ##########################################
 
 p1 <- ggplot(powerNC)+
   geom_bar(aes(x=scenario,y=nuSigs),stat="identity",fill="grey")+
@@ -485,55 +428,64 @@ ggsave("plots/power.png",width=6.5,height=2.5)
 
 ### reweight trends ###########################################
 
+#single run
+df <- generateData()
+next_df <- extendData(df, change="no_change")
+fitDynamicWeights(next_df)
+
+#replicate runs
+outputNC <- ldply(1:500,function(i){
+  df <- generateData()
+  next_df <- extendData(df, change="no_change")
+  temp <- fitDynamicWeights(next_df)
+  temp$simNu <- i
+  return(temp)
+})
+
+outputUC <- ldply(1:500,function(i){
+  df <- generateData()
+  next_df <- extendData(df,change="uniform_change")
+  temp <- fitDynamicWeights(next_df)
+  temp$simNu <- i
+  return(temp)
+})
 
 
+outputCC <- ldply(1:500,function(i){
+  df <- generateData()
+  next_df <- extendData(df,change="clustered_change")
+  temp <- fitDynamicWeights(next_df)
+  temp$simNu <- i
+  return(temp)
+})
+
+g1 <- ggplot(outputNC)+
+  geom_boxplot(aes(x=scenario,y=change),outlier.shape = NA)+
+  theme_bw()+
+  theme(legend.position = "none")+
+  geom_hline(yintercept=0,linetype="dashed")+
+  xlab("sampling scenario")+ylab("change estimate")
+  #ylim(-1.3,0.3)
 
 
+g2 <- ggplot(outputUC)+
+  geom_boxplot(aes(x=scenario,y=change),outlier.shape = NA)+
+  theme_bw()+
+  theme(legend.position = "none")+
+  geom_hline(yintercept=0,linetype="dashed")+
+  xlab("sampling scenario")+ylab("change estimate")
+  #ylim(-1.5,0.3)
 
+g3 <- ggplot(outputCC)+
+  geom_boxplot(aes(x=scenario,y=change),outlier.shape = NA)+
+  theme_bw()+
+  theme(legend.position = "none")+
+  geom_hline(yintercept=0,linetype="dashed")+
+  xlab("sampling scenario")+ylab("change estimate")
+  #ylim(-1.5,0.5)
 
+plot_grid(g1,g2,g3,nrow=1)
 
-### jags check ##############################################
-
-# Bundle data
-win.data <- list(y = df$z[df$Visits2==1], M = length(df$z[df$Visits2==1]))
-
-# Specify model in BUGS language
-cat(file = "Bernoulli_GLM.txt","
-    model {
-    
-    # Priors
-    mean.psi ~ dunif(0,1)
-    alpha <- logit(mean.psi)     # intercepts
-
-    # Likelihood
-    for (i in 1:M){
-      y[i] ~ dbern(theta[i])
-      logit(theta[i]) <- alpha 
-    }
-      
-    totOccu <- sum(theta)
-      
-    }
-    ")
-
-# Initial values
-
-# Parameters monitored
-params <- c("alpha", "totOccu")
-
-# MCMC settings
-ni <- 10000   ;   nt <- 2   ;   nb <- 5000   ;  nc <- 3
-
-# Call WinBUGS or JAGS from R (ART <1 min)
-out1 <- jags(win.data, inits=NULL,params, "Bernoulli_GLM.txt", 
-             n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb)
-print(out1$summary, 2)
-
-### things to do: #####
-
-### sampling change
-
-### test effect of including urban bias in detection probability model 
-
+ggsave("plots/reweighted_change.png",width=7,height=4.5)
 
 ### end ######################################################
