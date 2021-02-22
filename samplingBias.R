@@ -355,21 +355,21 @@ plot_grid(g1,g2,g3,nrow=1)
 outputNC <- ldply(1:1000,function(i){
   df <- generateData()
   next_df <- extendData(df, change="no_change")
-  fitDynamic(next_df)
+  fitDynamicS(next_df)
 })
 powerNC <- ddply(outputNC,"scenario",summarise,nuSigs=mean(change_p<0.05))
 
 outputUC <- ldply(1:1000,function(i){
   df <- generateData()
   next_df <- extendData(df, change="uniform_change")
-  fitDynamic(next_df)
+  fitDynamicS(next_df)
 })
 powerUC <- ddply(outputUC,"scenario",summarise,nuSigs=mean(change_p<0.05))
 
 outputCC <- ldply(1:1000,function(i){
   df <- generateData()
   next_df <- extendData(df, change="clustered_change")
-  fitDynamic(next_df)
+  fitDynamicS(next_df)
 })
 powerCC <- ddply(outputCC,"scenario",summarise,nuSigs=mean(change_p<0.05))
 
@@ -377,7 +377,7 @@ g1 <- ggplot(outputNC)+
   geom_violin(aes(x=scenario,y=change),trim = TRUE)+
   theme_bw()+
   theme(legend.position = "none")+
-  geom_hline(yintercept=0,linetype="dashed")+
+  geom_hline(yintercept=1,linetype="dashed")+
   xlab("sampling scenario")+ylab("change estimate")+
   ylim(-2,2)
 
@@ -386,7 +386,7 @@ g2 <- ggplot(outputUC)+
   geom_violin(aes(x=scenario,y=change),trim = TRUE)+
   theme_bw()+
   theme(legend.position = "none")+
-  geom_hline(yintercept=0,linetype="dashed")+
+  geom_hline(yintercept=1,linetype="dashed")+
   xlab("sampling scenario")+ylab("change estimate")+
   ylim(-2,2)
 
@@ -394,11 +394,18 @@ g3 <- ggplot(outputCC)+
   geom_violin(aes(x=scenario,y=change),trim = TRUE)+
   theme_bw()+
   theme(legend.position = "none")+
-  geom_hline(yintercept=0,linetype="dashed")+
+  geom_hline(yintercept=1,linetype="dashed")+
   xlab("sampling scenario")+ylab("change estimate")+
   ylim(-2,2)
 
 plot_grid(g1,g2,g3,nrow=1)
+
+#combine into a data frame
+outputNC$Environ_change <- "no_change"
+outputUC$Environ_change <- "uniform_change"
+outputCC$Environ_change <- "clusetered_change"
+
+allOutput_Simple <- rbind(outputNC,outputUC,outputCC)
 
 ### power ##########################################
 
@@ -432,60 +439,157 @@ ggsave("plots/power.png",width=6.5,height=2.5)
 df <- generateData()
 next_df <- extendData(df, change="no_change")
 fitDynamicWeights(next_df)
+fitDynamicWeightsS(next_df)
 
 #replicate runs
-outputNC <- ldply(1:500,function(i){
+outputNC <- ldply(1:1000,function(i){
   df <- generateData()
   next_df <- extendData(df, change="no_change")
-  temp <- fitDynamicWeights(next_df)
+  temp <- fitDynamicWeightsS(next_df)
   temp$simNu <- i
   return(temp)
 })
 
-outputUC <- ldply(1:500,function(i){
+outputUC <- ldply(1:1000,function(i){
   df <- generateData()
   next_df <- extendData(df,change="uniform_change")
-  temp <- fitDynamicWeights(next_df)
+  temp <- fitDynamicWeightsS(next_df)
   temp$simNu <- i
   return(temp)
 })
 
 
-outputCC <- ldply(1:500,function(i){
+outputCC <- ldply(1:1000,function(i){
   df <- generateData()
   next_df <- extendData(df,change="clustered_change")
-  temp <- fitDynamicWeights(next_df)
+  temp <- fitDynamicWeightsS(next_df)
   temp$simNu <- i
   return(temp)
 })
 
 g1 <- ggplot(outputNC)+
-  geom_boxplot(aes(x=scenario,y=change),outlier.shape = NA)+
+  geom_boxplot(aes(x=factor(scenario),y=change),outlier.shape = NA)+
   theme_bw()+
   theme(legend.position = "none")+
-  geom_hline(yintercept=0,linetype="dashed")+
+  geom_hline(yintercept=1,linetype="dashed")+
   xlab("sampling scenario")+ylab("change estimate")
   #ylim(-1.3,0.3)
 
 
 g2 <- ggplot(outputUC)+
-  geom_boxplot(aes(x=scenario,y=change),outlier.shape = NA)+
+  geom_boxplot(aes(x=factor(scenario),y=change),outlier.shape = NA)+
   theme_bw()+
   theme(legend.position = "none")+
-  geom_hline(yintercept=0,linetype="dashed")+
+  geom_hline(yintercept=1,linetype="dashed")+
   xlab("sampling scenario")+ylab("change estimate")
   #ylim(-1.5,0.3)
 
 g3 <- ggplot(outputCC)+
-  geom_boxplot(aes(x=scenario,y=change),outlier.shape = NA)+
+  geom_boxplot(aes(x=factor(scenario),y=change),outlier.shape = NA)+
   theme_bw()+
   theme(legend.position = "none")+
-  geom_hline(yintercept=0,linetype="dashed")+
+  geom_hline(yintercept=1,linetype="dashed")+
   xlab("sampling scenario")+ylab("change estimate")
   #ylim(-1.5,0.5)
 
 plot_grid(g1,g2,g3,nrow=1)
 
-ggsave("plots/reweighted_change.png",width=7,height=4.5)
+#combine data
+outputNC$Environ_change <- "no_change"
+outputUC$Environ_change <- "uniform_change"
+outputCC$Environ_change <- "clusetered_change"
+allOutput_RW <- rbind(outputNC,outputUC,outputCC)
+
+
+### compare trends ##############################
+
+#and with simple analysis
+allOutput_Simple$Analysis <- "Simple"
+allOutput_RW$Analysis <- "Reweighted"
+allOutput <- rbind(allOutput_Simple,allOutput_RW[,-8])
+
+#exclude outliers
+allOutput <- subset(allOutput,change < quantile(allOutput$change,0.999))
+
+g1 <- ggplot(subset(allOutput,Environ_change=="no_change"))+
+  geom_violin(aes(x=factor(scenario),y=change,
+                  fill=Analysis),
+              position = position_dodge(width = 0.5),
+              draw_quantiles = c(0.25,0.5,0.75))+
+  theme_bw()+
+  scale_fill_manual("Analysis",values=c("grey","white"))+
+  xlab("sampling scenario")+
+  ylab("Predicted occupancy change")+
+  theme_few()+
+  geom_hline(yintercept=1,linetype="dashed")+
+  theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
+        legend.position=c(0.2,0.85),legend.key.size=unit(0.5,"line"),
+                          legend.title = (element_text(size=10)))+
+  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
+                                                   "3" = "Bias","4" = "Bias+"))+
+  labs(subtitle = "No urban change")
+
+
+g2 <- ggplot(subset(allOutput,Environ_change=="uniform_change"))+
+  geom_violin(aes(x=factor(scenario),y=change,
+                  fill=Analysis),
+              position = position_dodge(width = 0.5),
+              draw_quantiles = c(0.25,0.5,0.75))+
+  theme_bw()+
+  scale_fill_manual("Analysis",values=c("grey","white"))+
+  xlab("sampling scenario")+
+  ylab("Predicted occupancy change")+
+  theme_few()+
+  geom_hline(yintercept=1,linetype="dashed")+
+  theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
+        legend.position=c(0.2,0.85),legend.key.size=unit(0.5,"line"),
+                          legend.title = (element_text(size=10)))+
+  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
+                                                   "3" = "Bias","4" = "Bias+"))+
+  labs(subtitle = "Uniform urban change")
+
+
+g3 <- ggplot(subset(allOutput,Environ_change=="clusetered_change"))+
+  geom_violin(aes(x=factor(scenario),y=change,
+                  fill=Analysis),
+              position = position_dodge(width = 0.5),
+              draw_quantiles = c(0.25,0.5,0.75))+
+  theme_bw()+
+  scale_fill_manual("Analysis",values=c("grey","white"))+
+  xlab("sampling scenario")+
+  ylab("Predicted occupancy change")+
+  theme_few()+
+  geom_hline(yintercept=1,linetype="dashed")+
+  theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
+        legend.position=c(0.2,0.85),legend.key.size=unit(0.5,"line"),
+                          legend.title = (element_text(size=10)))+
+  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
+                                                   "3" = "Bias","4" = "Bias+"))+
+  labs(subtitle = "Clustered urban change")
+
+
+plot_grid(g1,g2,g3,nrow=1)
+
+ggsave("plots/reweighted_trends.png",width=10.6,height=3)
+
+
+### alt weights #################################################
+
+#upweight sites that are sampled twice???
+
+### sampling bias vs environ change bias ########################
+
+#clustered environ change and scenario 4
+
+#each sim - pull out bias of data and bias of estimate
+
+#bias of data 
+#effect of urban change on repeat samples
+#get repeat surveys and urban change
+#test relationship
+
+#bias of estimate
+#just get estimate and compare with change in the full observed sample
+
 
 ### end ######################################################
