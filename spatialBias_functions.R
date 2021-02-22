@@ -148,10 +148,17 @@ extendData <- function(df,beta1=-3,urbanBias=2,change="no_change"){
 fitDynamicS <- function(next_df){
   
   plyr::ldply(1:4,function(i){
-    glm1 <- glm(z ~ factor(Time), 
+    glm1 <- glm(z ~ Time, 
                   data = next_df[next_df[,paste0("Visits",i)]==1,],family=binomial)
+    
+    pred1 <- predict(glm1,newdata=data.frame(Time=1),type="response")
+    pred2 <- predict(glm1,newdata=data.frame(Time=2),type="response")
+    
     temp <- data.frame(scenario = i, 
-                       change = summary(glm1)$coefficients[2,1],
+                       pred1 = pred1,
+                       pred2 = pred2,
+                       change = pred2/pred1,
+                       change_coef = summary(glm1)$coefficients[2,1],
                        change_se = summary(glm1)$coefficients[2,2],
                        change_p = summary(glm1)$coefficients[2,4])
     temp$scenario <- factor(temp$scenario)
@@ -169,8 +176,16 @@ fitDynamic <- function(next_df){
   plyr::ldply(1:4,function(i){
     glm1 <- glmer(z ~ Time + (1|Site), 
                 data = next_df[next_df[,paste0("Visits",i)]==1,],family=binomial)
-    temp <- data.frame(scenario = i, 
-                       change = summary(glm1)$coefficients[2,1],
+    
+    
+    pred1 <- predict(glm1,newdata=data.frame(Time=1),re.form=NA,type="response")
+    pred2 <- predict(glm1,newdata=data.frame(Time=2),re.form=NA,type="response")
+    
+    temp <- data.frame(scenario = i,
+                       pred1 = pred1,
+                       pred2 = pred2,
+                       change = pred2/pred1,
+                       change_coef = summary(glm1)$coefficients[2,1],
                        change_se = summary(glm1)$coefficients[2,2],
                        change_p = summary(glm1)$coefficients[2,4])
     temp$scenario <- factor(temp$scenario)
@@ -323,8 +338,8 @@ getTimePoints_RW <- function(next_df){
 fitDynamicWeights <- function(next_df){
   
   #get weights for each time point
-  temp1 <- getWeights(df = subset(next_df,Time==1))
-  temp2 <- getWeights(df = subset(next_df,Time==2))
+  temp1 <- getWeights(subset(next_df,Time==1))
+  temp2 <- getWeights(subset(next_df,Time==2))
   next_df <- rbind(temp1,temp2)
   
   library(lme4)
@@ -335,13 +350,20 @@ fitDynamicWeights <- function(next_df){
                   weights = next_df[df[,paste0("Visits",i)]==1,paste0("Weights",i)],
                   data = next_df[next_df[,paste0("Visits",i)]==1,])
     
+    pred1 <- predict(lmer1,newdata=data.frame(Time=1),re.form=NA,type="response")
+    pred2 <- predict(lmer1,newdata=data.frame(Time=2),re.form=NA,type="response")
+    
+    
     #get robust standard errors
     #require(merDeriv)
     #temp <- bread.glmerMod(lmer1,full=FALSE)
     #sqrt(diag(temp))
     
     temp <- data.frame(scenario = i, 
-                       change = summary(lmer1)$coefficients[2,1],
+                       pred1 = pred1,
+                       pred2 = pred2,
+                       change = pred2/pred1,
+                       change_coef = summary(lmer1)$coefficients[2,1],
                        change_se = summary(lmer1)$coefficients[2,2],
                        change_p = summary(lmer1)$coefficients[2,4])
     
@@ -351,6 +373,40 @@ fitDynamicWeights <- function(next_df){
   
   
 }
+
+
+fitDynamicWeightsS <- function(next_df){
+  
+  #get weights for each time point
+  temp1 <- getWeights(subset(next_df,Time==1))
+  temp2 <- getWeights(subset(next_df,Time==2))
+  next_df <- rbind(temp1,temp2)
+  #next_df <- getWeights(next_df)
+  
+  require(survey)
+  
+  plyr::ldply(1:4,function(i){
+    sglm1 <- svyglm(z ~ Time,
+                    family=binomial,
+                    design = svydesign(~ 1, 
+                                       weights = ~ next_df[next_df[,paste0("Visits",i)]==1,paste0("Weights",i)],
+                                       data = next_df[next_df[,paste0("Visits",i)]==1,]))
+    
+    pred1 <- predict(sglm1,newdata=data.frame(Time=1),type="response")
+    pred2 <- predict(sglm1,newdata=data.frame(Time=2),type="response")
+    
+    require(boot)
+    data.frame(scenario = i, 
+               pred1 = pred1[1],
+               pred2 = pred2[1],
+               change = pred2[1]/pred1[1],
+               change_coef = summary(sglm1)$coefficients[2,1],
+               change_se = summary(sglm1)$coefficients[2,2],
+               change_p = summary(sglm1)$coefficients[2,2])
+  })
+  
+}
+
 
 getRepeatSurveys <- function(df,meanP=0.5,nuReps=5){
   
@@ -403,7 +459,7 @@ ni <- 500   ;   nt <- 2   ;   nb <- 200   ;   nc <- 3
 
 # fit model
 out1 <- jags(jags.data, inits, params, 
-             model, 
+             paste("models",model,sep="/"), 
              n.chains = nc,n.thin = nt, 
              n.iter = ni, n.burnin = nb,
              parallel = T) 
@@ -515,5 +571,28 @@ plotObsChange <- function(outputNC){
                                                      "Visit3" = "Bias","Visit4" = "Bias+"))+
     ylab("Occupancy change")+
     geom_hline(yintercept=1,linetype="dashed")
+  
+}
+
+plotObsProp_P <- function(outputNC,mytitle){
+  
+  outputNC_melt <- reshape2::melt(outputNC)
+  outputNC_melt$scenario <- sapply(as.character(outputNC_melt$variable),function(x){
+    strsplit(x,"_")[[1]][1]})
+  outputNC_melt$time <- sapply(as.character(outputNC_melt$variable),function(x){
+    strsplit(x,"_")[[1]][2]})
+  outputNC_melt$time <- ifelse(outputNC_melt$time=="Time1","1","2")
+  
+  ggplot(outputNC_melt,aes(x=scenario,y=value,fill=time))+
+    geom_violin(position="dodge",draw_quantiles=c(0.25,0.5,0.75),
+                alpha=0.5)+
+    theme_few()+
+    scale_fill_manual("Time point", values = c("lightblue","blue"))+
+    scale_x_discrete("Sampling scenario", labels = c("Visit1" = "Full","Visit2" = "Random",
+                                                     "Visit3" = "Bias","Visit4" = "Bias+"))+
+    ylab("Occupancy proportion")+
+    theme(legend.position = c(0.2,0.85),legend.key.size=unit(0.5,"line"),
+          legend.title = (element_text(size=10)))+
+    labs(subtitle = mytitle)
   
 }
