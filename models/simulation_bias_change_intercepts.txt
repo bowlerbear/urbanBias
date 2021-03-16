@@ -1,0 +1,40 @@
+
+        model {
+        
+        # Priors
+        p.int ~ dunif(0, 1)         
+        alpha0 <- logit(p.int)  
+        urbanEffect ~ dnorm(0,0.01)
+
+        psi.int ~ dunif(0, 1)
+        beta.a <- logit(psi.int)
+        beta.change ~ dnorm(0,0.01)
+        
+        
+        # Likelihood
+        
+        for (i in 1:n.site){
+                for (t in 1:n.time){
+        
+        # State model
+        z[i,t] ~ dbern(psi[i,t])     
+        logit(psi[i,t]) <- beta.a + beta.change * (t-1)
+        
+        
+        # Observation model 
+         y[i,t] ~ dbin(p.eff[i,t],5)    
+         p.eff[i,t] <- z[i,t] * p[i,t]   
+         logit(p[i,t]) <- alpha0 
+
+          }
+        }
+
+        #change in proportion of occupied sites
+        for(t in 1:n.time){
+                psi.fs[t] <- sum(z[,t])/n.site
+        }
+        psi.change <- psi.fs[n.time]/psi.fs[1]
+
+        
+        }
+        
