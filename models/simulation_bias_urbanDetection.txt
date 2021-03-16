@@ -8,8 +8,6 @@
 
         psi.int ~ dunif(0, 1)
         beta.a <- logit(psi.int)
-        beta.covariate ~ dnorm(0,0.01)
-        
         
         # Likelihood
         
