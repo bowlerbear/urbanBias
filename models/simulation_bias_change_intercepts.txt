@@ -7,7 +7,7 @@
         urbanEffect ~ dnorm(0,0.01)
 
         psi.int ~ dunif(0, 1)
-        beta.a <- logit(psi.int)
+        beta0 <- logit(psi.int)
         beta.change ~ dnorm(0,0.01)
         
         
@@ -18,7 +18,7 @@
         
         # State model
         z[i,t] ~ dbern(psi[i,t])     
-        logit(psi[i,t]) <- beta.a + beta.change * (t-1)
+        logit(psi[i,t]) <- beta0 + beta.change * (t-1)
         
         
         # Observation model 
