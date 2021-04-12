@@ -479,6 +479,60 @@ ldply(1:4,function(i)myfun(i))
 }
 
 
+fitStaticOccuModelWeights <- function(df,model="simulation_bias_siteSelection.txt"){
+  
+  #defined in previous function - check it doesn't change 
+  #this is hard coded into the model script
+  nuReps = 5  
+  
+  myfun <- function(i = 1){
+    
+    #set y to NAs when visited = 0
+    df$y_Visits <- df$y
+    df$y_Visits[df[,paste0("Visits",i)]==0] <- NA
+    
+    #format for jags
+    require(rjags)
+    require(jagsUI)
+    jags.data = list(n.site=nrow(df),
+                     J = nuReps,
+                     Visited = ifelse(!is.na(df$y),1,0),
+                     y = df$y_Visits,
+                     covariate = df$urbanCover)
+    
+    
+    # Initial values
+    zst <- ifelse(jags.data$y>0,1,0)  
+    zst[is.na(zst)] <- 0
+    inits <- function(){list(z = zst)}
+    
+    # Parameters monitored
+    params <- c("p.int", "psi.int","urbanEffect","psi.fs") 
+    
+    # MCMC settings
+    ni <- 500   ;   nt <- 2   ;   nb <- 200   ;   nc <- 3
+    
+    # fit model
+    out1 <- jags(jags.data, inits, params, 
+                 paste("models",model,sep="/"), 
+                 n.chains = nc,n.thin = nt, 
+                 n.iter = ni, n.burnin = nb,
+                 parallel = T) 
+    
+    out1$summary
+    
+    #export like this
+    data.frame(scenario = i, 
+               estimate = out1$mean$psi.fs,
+               se = out1$sd$psi.fs)
+  }
+  
+  require(plyr)
+  ldply(1:4,function(i)myfun(i))
+  
+}
+
+
 getOccuTimePoints <- function(next_df,model="simulation_bias_intercepts.txt"){
   
   temp1 <- fitStaticOccuModel(subset(next_df,Time==1),model=model)
