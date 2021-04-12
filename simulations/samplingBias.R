@@ -3,7 +3,7 @@ library(ggplot2)
 library(cowplot)
 library(ggthemes)
 
-source('C:/Users/db40fysa/Dropbox/CS spatial pattern/MS/urbanBias/spatialBias_functions.R')
+source('simulations/spatialBias_functions.R')
 
 #test the effect of the following possible options 
 #- include covariate in state model (i.e. predict response at unsampled sites based on pattern in response at sampled sites)
