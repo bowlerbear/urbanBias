@@ -82,7 +82,7 @@ ggsave("plots/Obs_change.png",width=10.5,height=6)
 
 ### naive time points #########################################
 
-outputNC <- ldply(1:500,function(i){
+outputNC <- ldply(1:1000,function(i){
   df <- generateData()
   next_df <- extendData(df, change="no_change")
   temp <- getTimePoints(next_df)
@@ -90,7 +90,7 @@ outputNC <- ldply(1:500,function(i){
   return(temp)
 })
 
-outputUC <- ldply(1:500,function(i){
+outputUC <- ldply(1:1000,function(i){
   df <- generateData()
   next_df <- extendData(df,change="uniform_change")
   temp <- getTimePoints(next_df)
@@ -99,7 +99,7 @@ outputUC <- ldply(1:500,function(i){
 })
 
 
-outputCC <- ldply(1:500,function(i){
+outputCC <- ldply(1:1000,function(i){
   df <- generateData()
   next_df <- extendData(df,change="clustered_change")
   temp <- getTimePoints(next_df)
@@ -107,45 +107,15 @@ outputCC <- ldply(1:500,function(i){
   return(temp)
 })
 
-g1 <- ggplot(outputNC)+
-  geom_violin(aes(x=scenario,y=estimate,fill=Time),
-              position = position_dodge(width = 0.5))+
-              theme_bw()+
-              theme(legend.position = "none")+
-              xlab("sampling scenario")+
-              ylab("pred occupancy prop")+
-              labs(subtitle = "no urban change")+
-              theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
-              ylim(0,0.7)
+outputNC$Environ_change <- "no_change"
+outputUC$Environ_change <- "uniform_change"
+outputCC$Environ_change <- "clusetered_change"
 
-g2 <- ggplot(outputUC)+
-  geom_violin(aes(x=scenario,y=estimate,fill=Time),
-              position = position_dodge(width = 0.5))+
-              theme_bw()+
-              theme(legend.position = "none")+
-              xlab("sampling scenario")+
-              ylab("pred occupied prop")+
-              labs(subtitle = "uniform urban change")+
-              theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
-              ylim(0,0.7)
-
-g3 <- ggplot(outputCC)+
-  geom_violin(aes(x=scenario,y=estimate,fill=Time),
-              position = position_dodge(width = 0.5))+
-              theme_bw()+
-              theme(legend.position = "none")+
-              xlab("sampling scenario")+
-              ylab("pred occupied prop")+
-              labs(subtitle = "clustered urban change")+
-              theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
-              ylim(0,0.7)
-
-
-grid1 <- plot_grid(g1,g2,g3,nrow=1)
+allOutput_Simple <- rbind(outputNC,outputUC,outputCC)
 
 ### reweight time points ###################################
 
-outputNC <- ldply(1:100,function(i){
+outputNC_RW <- ldply(1:1000,function(i){
   df <- generateData()
   next_df <- extendData(df, change="no_change")
   temp <- getTimePoints_RW(next_df)
@@ -153,7 +123,7 @@ outputNC <- ldply(1:100,function(i){
   return(temp)
 })
 
-outputUC <- ldply(1:100,function(i){
+outputUC_RW <- ldply(1:1000,function(i){
   df <- generateData()
   next_df <- extendData(df,change="uniform_change")
   temp <- getTimePoints_RW(next_df)
@@ -162,7 +132,7 @@ outputUC <- ldply(1:100,function(i){
 })
 
 
-outputCC <- ldply(1:100,function(i){
+outputCC_RW <- ldply(1:1000,function(i){
   df <- generateData()
   next_df <- extendData(df,change="clustered_change")
   temp <- getTimePoints_RW(next_df)
@@ -170,43 +140,76 @@ outputCC <- ldply(1:100,function(i){
   return(temp)
 })
 
-g1 <- ggplot(outputNC)+
-  geom_violin(aes(x=scenario,y=estimate/500,fill=Time),
-              position = position_dodge(width = 0.5))+
-  theme_bw()+
-  theme(legend.position = "top")+
-  scale_fill_brewer("Time step",type="seq")+
-  xlab("sampling scenario")+
-  ylab("pred occupancy prop")+
-  labs(subtitle = "No urban change")+
-  theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
-  ylim(0,0.7)
+outputNC_RW$Environ_change <- "no_change"
+outputUC_RW$Environ_change <- "uniform_change"
+outputCC_RW$Environ_change <- "clusetered_change"
 
-g2 <- ggplot(outputUC)+
-  geom_violin(aes(x=scenario,y=estimate/500,fill=Time),
-              position = position_dodge(width = 0.5))+
-  theme_bw()+
-  theme(legend.position = "top")+
-  scale_fill_brewer("Time step",type="seq")+
-  xlab("sampling scenario")+
-  ylab("pred occupied prop")+
-  labs(subtitle = "Uniform urban change")+
-  theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
-  ylim(0,0.7)
+allOutput_RW <- rbind(outputNC_RW,outputUC_RW,outputCC_RW)
+ 
+### compare time points ##############################
 
-g3 <- ggplot(outputCC)+
-  geom_violin(aes(x=scenario,y=estimate/500,fill=Time),
-              position = position_dodge(width = 0.5))+
+allOutput_Simple$Analysis <- "Simple"
+allOutput_RW$Analysis <- "Reweighted"
+allOutput <- rbind(allOutput_Simple,allOutput_RW)
+
+g1 <- ggplot(subset(allOutput,Environ_change=="no_change" & Time==2))+
+  geom_violin(aes(x=factor(scenario),y=estimate,
+                  fill=Analysis),
+              position = position_dodge(width = 0.5),
+              draw_quantiles = c(0.25,0.5,0.75))+
   theme_bw()+
-  theme(legend.position = "top")+
-  scale_fill_brewer("Time step",type="seq")+
+  scale_fill_manual("Analysis",values=c("grey","white"))+
   xlab("sampling scenario")+
-  ylab("pred occupied prop")+
-  labs(subtitle = "Clustered urban change")+
-  theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
-  ylim(0,0.7)
+  ylab("Predicted occupancy")+
+  theme_few()+
+  theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
+        legend.position=c(0.2,0.25),legend.key.size=unit(0.5,"line"),
+        legend.title = (element_text(size=10)))+
+  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
+                                                   "3" = "Bias","4" = "Bias+"))+
+  labs(subtitle = "No urban change")
+
+
+g2 <- ggplot(subset(allOutput,Environ_change=="uniform_change" & Time==2))+
+  geom_violin(aes(x=factor(scenario),y=estimate,
+                  fill=Analysis),
+              position = position_dodge(width = 0.5),
+              draw_quantiles = c(0.25,0.5,0.75))+
+  theme_bw()+
+  scale_fill_manual("Analysis",values=c("grey","white"))+
+  xlab("sampling scenario")+
+  ylab("Predicted occupancy")+
+  theme_few()+
+  theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
+        legend.position=c(0.2,0.25),legend.key.size=unit(0.5,"line"),
+        legend.title = (element_text(size=10)))+
+  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
+                                                   "3" = "Bias","4" = "Bias+"))+
+  labs(subtitle = "Uniform urban change")
+
+
+g3 <- ggplot(subset(allOutput,Environ_change=="clusetered_change" & Time==2))+
+  geom_violin(aes(x=factor(scenario),y=estimate,
+                  fill=Analysis),
+              position = position_dodge(width = 0.5),
+              draw_quantiles = c(0.25,0.5,0.75))+
+  theme_bw()+
+  scale_fill_manual("Analysis",values=c("grey","white"))+
+  xlab("sampling scenario")+
+  ylab("Predicted occupancy")+
+  theme_few()+
+  theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
+        legend.position=c(0.2,0.25),legend.key.size=unit(0.5,"line"),
+        legend.title = (element_text(size=10)))+
+  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
+                                                   "3" = "Bias","4" = "Bias+"))+
+  labs(subtitle = "Clustered urban change")
+
 
 plot_grid(g1,g2,g3,nrow=1)
+
+ggsave("plots/reweighted_timepoints.png",width=10.6,height=3)
+
 
 ### trends ############################################
 
@@ -359,7 +362,6 @@ outputUC$Environ_change <- "uniform_change"
 outputCC$Environ_change <- "clusetered_change"
 allOutput_RW <- rbind(outputNC,outputUC,outputCC)
 
-
 ### compare trends ##############################
 
 #and with simple analysis
@@ -430,7 +432,6 @@ g3 <- ggplot(subset(allOutput,Environ_change=="clusetered_change"))+
 plot_grid(g1,g2,g3,nrow=1)
 
 ggsave("plots/reweighted_trends.png",width=10.6,height=3)
-
 
 ### alt weights #################################################
 
