@@ -3,7 +3,7 @@ library(ggplot2)
 library(cowplot)
 require(ggthemes)
 
-source('C:/Users/db40fysa/Dropbox/CS spatial pattern/MS/urbanBias/spatialBias_functions.R')
+source('simulations/spatialBias_functions.R')
 
 #test the effect of the following possible options 
 #- include covariate in state model (i.e. predict response at unsampled sites based on pattern in response at sampled sites)
@@ -56,7 +56,6 @@ output <- ldply(1:300,function(i){
 })
 plotEffects(output)
 
-
 #urban detection bias and urban detection model
 output <- ldply(1:300,function(i){
   df <- generateData()
@@ -69,27 +68,22 @@ plotEffects(output)
 
 ### reweight data #########################################################
 
-#ipw: Estimate Inverse Probability Weights
-#Functions to estimate the probability to receive the observed treatment, based on individual characteristics. The inverse of these probabilities can be used as weights when estimating causal effects #from observational data via marginal structural models. Both point, treatment situations and longitudinal studies can be analysed. The #same functions can be used to correct for informative censoring
-
-#add site visitation model to the occupancy model...
-
-#use it to predict missing values
-
-df <- getWeights(df)
-fitStaticWeights(df)
-
 temp <- ldply(1:300,function(i){
   df <- generateData()
-  df <- getWeights(df)
-  fitStatic(df)
+  df <- getRepeatSurveys(df)
+  temp <- fitStaticOccuModel(df,model="simulation_bias_urbanDetection.txt")
+  temp$simNu <- i
+  return(temp)
 })
 
 tempRW <- ldply(1:300,function(i){
   df <- generateData()
-  df <- getWeights(df)
-  fitStaticWeights(df)
+  df <- getRepeatSurveys(df)
+  temp <- fitStaticOccuModelWeights(df,model="simulation_bias_siteSelection.txt")
+  temp$simNu <- i
+  return(temp)
 })
+
 
 temp$Type <- "Naive"
 tempRW$Type <- "Reweighted"
@@ -126,7 +120,8 @@ sePlot <- ggplot(temp)+
   ylim(10,35)
 
 plot_grid(estimatePlot,sePlot,labels=c("A","B"), nrow=1)
-ggsave("plots/static_analysis.png",width=6.5,height=3)
+
+ggsave("plots/static_analysis_occu.png",width=6.5,height=3)
 
 ### dynamic scenario ####################################
 
