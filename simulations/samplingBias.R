@@ -19,6 +19,12 @@ df <- generateData()
 
 plotVisits(df)
 
+### sampling change #######################################
+
+df <- generateData()
+next_df <- extendData(df,change="clustered_change")#only variation in change with this option
+plotChange(next_df)
+
 ### observed change ###################################
 
 outputNC <- ldply(1:1000,function(i){
@@ -73,153 +79,6 @@ ggsave("plots/Obs_change.png",width=10.5,height=6)
 
 #ipw: Estimate Inverse Probability Weights
 #Functions to estimate the probability to receive the observed treatment, based on individual characteristics. The inverse of these probabilities can be used as weights when estimating causal effects #from observational data via marginal structural models. Both point, treatment situations and longitudinal studies can be analysed. The #same functions can be used to correct for informative censoring
-
-df <- getWeights(df)
-fitStaticWeights(df)
-
-temp <- ldply(1:1000,function(i){
-  df <- generateData()
-  df <- getWeights(df)
-  fitStatic(df)
-})
-
-tempRW <- ldply(1:1000,function(i){
-  df <- generateData()
-  df <- getWeights(df)
-  fitStaticWeights(df)
-})
-
-temp$Type <- "Simple"
-tempRW$Type <- "Reweighted"
-temp <- rbind(temp,tempRW)
-
-estimatePlot <- ggplot(temp)+
-  geom_violin(aes(x=factor(scenario),y=estimate,
-                   fill=Type),
-            position = position_dodge(width = 0.5),
-            draw_quantiles = c(0.25,0.5,0.75))+
-  theme_bw()+
-  scale_fill_manual("Analysis",values=c("grey","white"))+
-  xlab("sampling scenario")+
-  ylab("Predicted occupancy")+
-  theme_few()+
-  theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
-        legend.position=c(0.1,0.9))+
-  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
-                                                   "3" = "Bias","4" = "Bias+"))
-  
-
-sePlot <- ggplot(temp)+
-  geom_boxplot(aes(x=factor(scenario),y=se,
-                   fill=Type),
-               position = position_dodge(width = 0.5),
-               width=0.4,
-               outlier.shape = NA)+
-  theme_bw()+
-  scale_fill_manual("Analysis",values=c("grey","white"))+
-  xlab("sampling scenario")+
-  ylab("SE of total occupancy")+
-  labs(subtitle = "SE")+
-  theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
-        legend.position="top")+
-  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
-                                                   "3" = "Bias","4" = "Bias+"))
-
-plot_grid(estimatePlot,sePlot,labels=c("A","B"), nrow=1)
-ggsave("plots/static_analysis.png",width=6.5,height=3)
-
-### second time point ##################################
-
-df <- getWeights(df)
-fitStaticWeights(df)
-
-temp <- ldply(1:1000,function(i){
-  df <- generateData()
-  df <- extendData(df)
-  df <- subset(df,Time==2)
-  df <- getWeights(df)
-  fitStatic(df)
-})
-
-tempRW <- ldply(1:1000,function(i){
-  df <- generateData()
-  df <- extendData(df)
-  df <- subset(df,Time==2)
-  df <- getWeights(df)
-  fitStaticWeights(df)
-})
-
-temp$Type <- "Simple"
-tempRW$Type <- "Reweighted"
-temp <- rbind(temp,tempRW)
-
-estimatePlot <- ggplot(temp)+
-  geom_violin(aes(x=factor(scenario),y=estimate,
-                  fill=Type),
-              position = position_dodge(width = 0.5),
-              draw_quantiles = c(0.25,0.5,0.75))+
-  theme_bw()+
-  scale_fill_manual("Analysis",values=c("grey","white"))+
-  xlab("sampling scenario")+
-  ylab("Predicted occupancy")+
-  theme_few()+
-  theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
-        legend.position=c(0.15,0.88))+
-  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
-                                                   "3" = "Bias","4" = "Bias+"))
-
-sePlot <- ggplot(temp)+
-  geom_violin(aes(x=factor(scenario),y=se,
-                  fill=Type),
-              position = position_dodge(width = 0.75),
-              draw_quantiles = c(0.25,0.5,0.75),
-              trim = TRUE, scale="width")+
-  theme_bw()+
-  scale_fill_manual("Analysis",values=c("grey","white"))+
-  xlab("sampling scenario")+
-  ylab("Predicted occupancy SE")+
-  theme_few()+
-  theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
-        legend.position=c(0.15,0.88))+
-  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
-                                                   "3" = "Bias","4" = "Bias+"))
-
-plot_grid(estimatePlot,sePlot,labels=c("A","B"), nrow=1)
-ggsave("plots/static_analysis_second.png",width=10.5,height=4.5)
-
-#repeat also for the other types of urban change.
-
-### dynamic scenario ####################################
-
-#urban change scenario
-#assume each site is revisited, so current data is year 1
-
-#assumptions about urban change
-#no urban change - same urban bias and increasing urban bias
-#urban change everywhere - same urban bias and increasing urban bias
-#clustered urban change - same urban bias and increasing urban bias
-
-#run same analysis as before except with
-#(1) additional time step
-#(2) additional time steps and higher urban bias in second time step
-
-df <- generateData()
-
-next_df <- extendData(df,change="no_change")
-next_df <- extendData(df,change="uniform_change")
-next_df <- extendData(df,change="clustered_change")
-
-getTimePoints(next_df)
-plotTimePoints(getTimePoints(next_df))
-fitDynamic(next_df)
-fitStaticWeights(subset(next_df,Time==1))
-
-### sampling change #######################################
-
-df <- generateData()
-next_df <- extendData(df,change="clustered_change")#only variation in change with this option
-plotChange(next_df)
-
 
 ### naive time points #########################################
 
