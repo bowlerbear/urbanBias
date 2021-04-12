@@ -19,9 +19,57 @@ df <- generateData()
 
 plotVisits(df)
 
-fitStatic(df)
+### observed change ###################################
 
-### reweight data ###########################################################
+outputNC <- ldply(1:1000,function(i){
+  
+  df <- generateData()
+  next_df <- extendData(df,change="no_change")
+  #get proportion of sites observed to be occupied
+  getObsProp(next_df)
+  
+})
+q1 <- plotObsProp(outputNC,mytitle="No urban change")
+g1 <- plotObsChange(outputNC)
+
+outputUC <- ldply(1:1000,function(i){
+  
+  df <- generateData()
+  next_df <- extendData(df,change="uniform_change")
+  #get proportion of sites observed to be occupied
+  getObsProp(next_df)
+  
+})
+q2 <- plotObsProp(outputUC,mytitle="Uniform urban change")
+g2 <- plotObsChange(outputUC)
+
+outputCC <- ldply(1:1000,function(i){
+  
+  df <- generateData()
+  next_df <- extendData(df,change="clustered_change")
+  #get proportion of sites observed to be occupied
+  getObsProp(next_df)
+  
+})
+q3 <- plotObsProp(outputCC,mytitle="Clustered urban change")
+g3 <- plotObsChange(outputCC)
+
+
+plot1 <- plot_grid(q1,q2,q3,nrow=1)
+plot2 <- plot_grid(g1,g2,g3,nrow=1)
+
+plot_grid(plot1,plot2,ncol=1,align='v',
+          labels=c("A","B"),
+          vjust=1)
+
+ggsave("plots/Obs_change.png",width=10.5,height=6)
+
+#absolute difference varies
+#logit difference also varies
+#but relative (ratio) change in the same
+#for 1 to 3 under uniform change
+
+### model and reweight data #####################################################
 
 #ipw: Estimate Inverse Probability Weights
 #Functions to estimate the probability to receive the observed treatment, based on individual characteristics. The inverse of these probabilities can be used as weights when estimating causal effects #from observational data via marginal structural models. Both point, treatment situations and longitudinal studies can be analysed. The #same functions can be used to correct for informative censoring
@@ -74,7 +122,8 @@ sePlot <- ggplot(temp)+
   labs(subtitle = "SE")+
   theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
         legend.position="top")+
-  ylim(10,35)
+  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
+                                                   "3" = "Bias","4" = "Bias+"))
 
 plot_grid(estimatePlot,sePlot,labels=c("A","B"), nrow=1)
 ggsave("plots/static_analysis.png",width=6.5,height=3)
@@ -171,55 +220,6 @@ df <- generateData()
 next_df <- extendData(df,change="clustered_change")#only variation in change with this option
 plotChange(next_df)
 
-### observed change ###################################
-
-outputNC <- ldply(1:1000,function(i){
-  
-  df <- generateData()
-  next_df <- extendData(df,change="no_change")
-  #get proportion of sites observed to be occupied
-  getObsProp(next_df)
-  
-})
-q1 <- plotObsProp(outputNC,mytitle="No urban change")
-g1 <- plotObsChange(outputNC)
-
-outputUC <- ldply(1:1000,function(i){
-  
-  df <- generateData()
-  next_df <- extendData(df,change="uniform_change")
-  #get proportion of sites observed to be occupied
-  getObsProp(next_df)
-  
-})
-q2 <- plotObsProp(outputUC,mytitle="Uniform urban change")
-g2 <- plotObsChange(outputUC)
-
-outputCC <- ldply(1:1000,function(i){
-  
-  df <- generateData()
-  next_df <- extendData(df,change="clustered_change")
-  #get proportion of sites observed to be occupied
-  getObsProp(next_df)
-  
-})
-q3 <- plotObsProp(outputCC,mytitle="Clustered urban change")
-g3 <- plotObsChange(outputCC)
-
-
-plot1 <- plot_grid(q1,q2,q3,nrow=1)
-plot2 <- plot_grid(g1,g2,g3,nrow=1)
-
-plot_grid(plot1,plot2,ncol=1,align='v',
-          labels=c("A","B"),
-          vjust=1)
-
-ggsave("plots/Obs_change.png",width=10.5,height=6)
-
-#absolute difference varies
-#logit difference also varies
-#but relative (ratio) change in the same
-#for 1 to 3 under uniform change
 
 ### naive time points #########################################
 
