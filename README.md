@@ -18,4 +18,7 @@ This folder just contains some bits of code for different methods.
 ### Empirical-data
 This pulls together the data from the real-world datasets to analyse the spatial bias and draw the empirical data plot.
 
+The developing paper is available here:
+https://docs.google.com/document/d/1o-xt7q-mf2UyheL1s2KC2xmdPtLSlwqID5-h0oKzjb8/edit?usp=sharing
+
 
