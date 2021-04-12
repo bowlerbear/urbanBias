@@ -7,7 +7,7 @@
         urbanEffect ~ dnorm(0,0.01)
 
         psi.int ~ dunif(0, 1)
-        beta.a <- logit(psi.int)
+        beta0 <- logit(psi.int)
         
         # Likelihood
         
@@ -15,7 +15,7 @@
         
         # State model
         z[i] ~ dbern(psi[i])     
-        logit(psi[i]) <- beta.a 
+        logit(psi[i]) <- beta0 
         
         
         # Observation model 
