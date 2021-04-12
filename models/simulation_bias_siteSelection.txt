@@ -7,7 +7,7 @@
         urbanEffect ~ dnorm(0,0.01)
 
         psi.int ~ dunif(0, 1)
-        beta.a <- logit(psi.int)
+        beta0 <- logit(psi.int)
         beta.covariate ~ dnorm(0,0.01)
         
         
@@ -17,10 +17,11 @@
         
         # State model
         z[i] ~ dbern(psi[i])     
-        logit(psi[i]) <- beta.a 
+        logit(psi[i]) <- beta0 + urbanEffect * cloglog(probVisit[i])
         
         #can it go as a covariate here?
-        #assume a multivariate distribution - linear predictor correlated with prob of visitation? - with missing data
+        #assume a multivariate distribution 
+        #linear predictor correlated with prob of visitation? - with missing data
         #do the weights thing
         
         # Observation model 
@@ -37,7 +38,7 @@
         visit.urban ~ dnorm(0,0.01)
         
         for(i in 1:n.site){
-                Visited[i] ~ dnorm(probVisit[i])
+                Visited[i] ~ dbern(probVisit[i])
                 logit(probVisit[i]) <- visit.mu + visit.urban * covariate[i]
         }
         
