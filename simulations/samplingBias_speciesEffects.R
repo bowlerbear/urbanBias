@@ -3,7 +3,7 @@ library(ggplot2)
 library(cowplot)
 library(ggthemes)
 
-source('C:/Users/db40fysa/Dropbox/CS spatial pattern/MS/urbanBias/spatialBias_functions.R')
+source('simulations/spatialBias_functions.R')
 
 ### Species positively associated with urban cover #####
 
