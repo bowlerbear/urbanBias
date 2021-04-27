@@ -4,6 +4,10 @@ library(ggthemes)
 library(broom)
 library(plyr)
 
+
+### Urban plots #####
+
+
 #### amphibians ######
 samplingIntensity <- readRDS("C:/Users/db40fysa/Nextcloud/sMon/sMon-Analyses/Amphibians/amphiAnalysis/HPC_inputs/samplingIntensity.rds")
 st_geometry(samplingIntensity) <- NULL
@@ -177,3 +181,86 @@ plot_grid(amphis,butt,birds,
 ggsave("C:/Users/db40fysa/Dropbox/CS spatial pattern/MS/urbanBias/realworldBias.png",width=9.3,height=9)
 
 #### end ####
+
+### protected area plots ####
+protectedArea <- readRDS("C:/Users/db40fysa/Nextcloud/sMon/sMon-Analyses/Odonata_Git/sMon-insects/environ-data/protectedarea_MTBQ.rds")
+
+### birds ####################
+
+#run code above to get samplingIntensity_Group
+samplingIntensity <- inner_join(samplingIntensity,protectedArea,by=c("MTB_Q"))
+samplingIntensity_Group <- inner_join(samplingIntensity_Group,protectedArea,by=c("MTB_Q"))
+
+#left
+birdsL <- ggplot(samplingIntensity_Group,
+                 aes(x=PA_area*100,y=Visited,group=Year2))+
+  stat_smooth(aes(color=Year2),
+              method = "glm", 
+              method.args = list(family = "binomial"),
+              size=1.5,
+              se=FALSE)+
+  theme_few()+
+  theme(legend.position = "none")+
+  scale_color_viridis_c("Year")+
+  xlab("Protected areas cover (%)")+ylab("Visit probability")
+
+#right
+# year as a factor
+samplingIntensity$YearF <- factor(samplingIntensity$Year)
+
+#one model
+model1 <- glm(Visited ~ -1 + YearF * PA_area, family= binomial, data = samplingIntensity)
+summary(model1)
+
+modelCoefs <- model1 %>%
+  tidy() %>%
+  mutate(lower = estimate - 2*std.error, 
+         upper = estimate + 2*std.error) %>%
+  mutate(Year = as.numeric(str_remove_all(term,"[^0-9.-]"))) %>%
+  filter(str_detect(term, ':'))
+
+#separate models
+myYears <- sort(unique(samplingIntensity$Year))
+modelCoefs <- ldply(myYears,function(y){
+  
+  glm1 <- glm(Visited ~ PA_area, family= binomial, data = subset(samplingIntensity,Year == y))
+  glmConfint <- confint(glm1)
+  data.frame(Year = y, 
+             estimate=summary(glm1)$coefficients[2,1],
+             lower=glmConfint[2,1],
+             upper=glmConfint[2,2])
+})
+
+birdsR <- ggplot(modelCoefs)+
+  geom_crossbar(aes(x = Year, y = estimate, 
+                    ymax = upper, ymin = lower))+
+  geom_hline(yintercept = 0, colour="red", linetype="dashed")+
+  theme_few()+ylab("Effect of protected area")+
+  scale_x_continuous(labels=c(1992,2002,2012),breaks=c(1992,2002,2012))
+
+
+### land use change #####
+
+environData <- readRDS("C:/Users/db40fysa/Nextcloud/sMon/sMon-Analyses/Odonata_Git/sMon-insects/environ-data/esacci_MTBQ.rds")
+environData$Q <- NA
+environData$Q[environData$Quadrant=="NW"] <- 1
+environData$Q[environData$Quadrant=="NO"] <- 2
+environData$Q[environData$Quadrant=="SW"] <- 3
+environData$Q[environData$Quadrant=="SO"] <- 4
+environData$MTB_Q <- paste0(environData$Value,environData$Q)
+
+#get max and min of each land cover for each grid
+environChange <- environData %>%
+                        dplyr::group_by(MTB_Q) %>%
+                        dplyr::summarise(urbanChange = max(urban) - min(urban),
+                                        waterChange = max(water) - min(water),
+                                        treeChange = max(tree) - min(tree),
+                                        grassChange = max(grass) - min(grass),
+                                        cropChange = max(crop) - min(crop)) %>%
+                        tidyr::pivot_longer(!MTB_Q,names_to="landCover",values_to="change") %>%
+                        dplyr::group_by(MTB_Q) %>%
+                        dplyr::filter(change==max(change)) %>%
+                        filter(!duplicated(change))
+
+hist(environChange$change)
+summary(environChange$change)
