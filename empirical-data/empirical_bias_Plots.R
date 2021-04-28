@@ -3,16 +3,16 @@ library(tidyverse)
 library(ggthemes)
 library(broom)
 library(plyr)
+library(cowplot)
 
-
-### Urban plots #####
-
+### URBAN #####
 
 #### amphibians ######
 samplingIntensity <- readRDS("C:/Users/db40fysa/Nextcloud/sMon/sMon-Analyses/Amphibians/amphiAnalysis/HPC_inputs/samplingIntensity.rds")
 st_geometry(samplingIntensity) <- NULL
 
 #put numbers in 2 -year periods
+samplingIntensity$MTB_Q <- gsub("_","",samplingIntensity$MTB_Q)
 samplingIntensity$Year2 <- samplingIntensity$Year
 samplingIntensity$Year2 [samplingIntensity$Year2 %% 2 == 1] <- samplingIntensity$Year2 [samplingIntensity$Year2 %% 2 == 1] + 1
 samplingIntensity_Group <- samplingIntensity %>%
@@ -164,7 +164,6 @@ birdsR <- ggplot(modelCoefs)+
     
 #### combine ####
 
-library(cowplot)
 amphis <- plot_grid(amphisL,amphisR,nrow=1)
 butt <- plot_grid(buttL,buttR,nrow=1)
 birds <- plot_grid(birdsL,birdsR,nrow=1)
@@ -178,16 +177,106 @@ plot_grid(amphis,butt,birds,
           scale = c(0.9,0.9,0.9),
           vjust = c(0.95,0.95,0.95), hjust = c(-0.5,-0.5,-0.75))
 
-ggsave("C:/Users/db40fysa/Dropbox/CS spatial pattern/MS/urbanBias/realworldBias.png",width=9.3,height=9)
+ggsave("plots/realworldBias_urban.png",width=9.3,height=9)
 
-#### end ####
+### PROTECTED AREA ####
 
-### protected area plots ####
 protectedArea <- readRDS("C:/Users/db40fysa/Nextcloud/sMon/sMon-Analyses/Odonata_Git/sMon-insects/environ-data/protectedarea_MTBQ.rds")
+
+### amphibians ##############
+
+#run code above to get samplingIntensity and samplingIntensity_Group
+
+#add on protected area data
+samplingIntensity <- inner_join(samplingIntensity,protectedArea,by=c("MTB_Q"))
+samplingIntensity_Group <- inner_join(samplingIntensity_Group,protectedArea,by=c("MTB_Q"))
+
+#left
+amphisL <- 
+  ggplot(samplingIntensity_Group,
+         aes(x=PA_area*100,y=Visited,group=Year2))+
+  stat_smooth(aes(color=Year2),
+              method = "glm", 
+              method.args = list(family = "binomial"),
+              size=1.5,
+              se=FALSE)+
+  theme_few()+
+  theme(legend.position = c(0.1,0.75))+
+  theme(legend.key.height = unit(0.275, 'cm'),
+        legend.key.width = unit(0.15, 'cm'))+
+  scale_color_viridis_c("Year")+
+  xlab("Protected area cover (%)")+ylab("Visit probability")
+
+
+#right
+#separate models
+myYears <- 1992:2018
+modelCoefs <- ldply(myYears,function(y){
+  
+  glm1 <- glm(Visited ~ PA_area, family= binomial, data = subset(samplingIntensity,Year == y))
+  glmConfint <- confint(glm1)
+  data.frame(Year = y, 
+             estimate=summary(glm1)$coefficients[2,1],
+             lower=glmConfint[2,1],
+             upper=glmConfint[2,2])
+})
+
+amphisR <- ggplot(modelCoefs)+
+  geom_crossbar(aes(x = Year, y = estimate, 
+                    ymax = upper, ymin = lower))+
+  geom_hline(yintercept = 0, colour="red", linetype="dashed")+
+  theme_few()+ylab("Effect of protected area")+
+  scale_x_continuous(labels=c(1992,2002,2012),breaks=c(1992,2002,2012))
+
+amphis <- plot_grid(amphisL,amphisR,nrow=1)
+
+### butterflies #############
+
+#run code above to get samplingIntensity and samplingIntensity_Group
+
+#add on protected area data
+samplingIntensity <- inner_join(samplingIntensity,protectedArea,by=c("MTB_Q"))
+samplingIntensity_Group <- inner_join(samplingIntensity_Group,protectedArea,by=c("MTB_Q"))
+
+#left
+buttL <- ggplot(samplingIntensity_Group,
+                aes(x=PA_area*100,y=Visited,group=Year2))+
+  stat_smooth(aes(color=Year2),
+              method = "glm", 
+              method.args = list(family = "binomial"),
+              size=1.5,
+              se=FALSE)+
+  theme_few()+
+  theme(legend.position="none")+
+  scale_color_viridis_c("Year")+
+  xlab("Protected area cover (%)")+ylab("Visit probability")
+
+#right
+myYears <- sort(unique(samplingIntensity$Year))
+modelCoefs <- ldply(myYears,function(y){
+  
+  glm1 <- glm(Visited ~ PA_area, family= binomial, data = subset(samplingIntensity,Year == y))
+  glmConfint <- confint(glm1)
+  data.frame(Year = y, 
+             estimate=summary(glm1)$coefficients[2,1],
+             lower=glmConfint[2,1],
+             upper=glmConfint[2,2])
+})
+
+buttR <- ggplot(modelCoefs)+
+  geom_crossbar(aes(x = Year, y = estimate, 
+                    ymax = upper, ymin = lower))+
+  geom_hline(yintercept = 0, colour="red", linetype="dashed")+
+  theme_few()+ylab("Effect of protected area")+
+  scale_x_continuous(labels=c(1992,2002,2012),breaks=c(1992,2002,2012))
+
+butt <- plot_grid(buttL,buttR,nrow=1)
 
 ### birds ####################
 
-#run code above to get samplingIntensity_Group
+#run code above to get samplingIntensity and samplingIntensity_Group
+
+#add on protected area data
 samplingIntensity <- inner_join(samplingIntensity,protectedArea,by=c("MTB_Q"))
 samplingIntensity_Group <- inner_join(samplingIntensity_Group,protectedArea,by=c("MTB_Q"))
 
@@ -202,7 +291,7 @@ birdsL <- ggplot(samplingIntensity_Group,
   theme_few()+
   theme(legend.position = "none")+
   scale_color_viridis_c("Year")+
-  xlab("Protected areas cover (%)")+ylab("Visit probability")
+  xlab("Protected area cover (%)")+ylab("Visit probability")
 
 #right
 # year as a factor
@@ -238,8 +327,24 @@ birdsR <- ggplot(modelCoefs)+
   theme_few()+ylab("Effect of protected area")+
   scale_x_continuous(labels=c(1992,2002,2012),breaks=c(1992,2002,2012))
 
+birds <- plot_grid(birdsL,birdsR,nrow=1)
 
-### land use change #####
+
+### combine #############
+
+plot_grid(amphis,butt,birds,
+          ncol=1,
+          labels=c("A - Amphibians",
+                   "B - Butterflies",
+                   "C - Birds"),
+          align = "v",
+          scale = c(0.9,0.9,0.9),
+          vjust = c(0.95,0.95,0.95), hjust = c(-0.5,-0.5,-0.75))
+
+ggsave("plots/realworldBias_protectedarea.png",width=9.3,height=9)
+
+
+### LAND USE CHANGE #####
 
 environData <- readRDS("C:/Users/db40fysa/Nextcloud/sMon/sMon-Analyses/Odonata_Git/sMon-insects/environ-data/esacci_MTBQ.rds")
 environData$Q <- NA
