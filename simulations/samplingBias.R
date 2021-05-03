@@ -17,8 +17,6 @@ source('simulations/spatialBias_functions.R')
 
 df <- generateData()
 
-plotVisits(df)
-
 ### sampling change #######################################
 
 df <- generateData()
