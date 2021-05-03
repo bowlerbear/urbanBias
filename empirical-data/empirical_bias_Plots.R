@@ -541,7 +541,7 @@ qplot(urbanChange,change,data=environChange)
 
 #get number of years in which a MTBQ was visited
 samplingSummary <- samplingIntensity %>%
-                      dplyr::group_by(MTB_Q) %>%
+                      dplyr::group_by(MTB_Q,x,y) %>%
                       dplyr::summarise(nuYears = sum(Visited),
                                 nuVisits = sum(nuVisits)) %>%
                       ungroup() %>%
@@ -576,6 +576,11 @@ gam1 <- gam(cbind(nuYears,totalYears-nuYears) ~ change + s(x,y),
             data = samplingSummary)
 summary(gam1)#positive effect
 
+gam1 <- gam(cbind(nuYears,totalYears-nuYears) ~ log(change+1) + s(x,y), 
+            family ="binomial", 
+            data = samplingSummary)
+summary(gam1)#positive effect
+
 #with spaMM
 library(spaMM)
 spamm1 <- HLCor(cbind(nuYears,totalYears-nuYears) ~ change + 
@@ -597,7 +602,7 @@ spamm2 <- HLCor(cbind(nuYears,totalYears-nuYears) ~ 1 +
 
 #get number of years in which a MTBQ was visited
 samplingSummary <- samplingIntensity %>%
-  dplyr::group_by(MTB_Q) %>%
+  dplyr::group_by(MTB_Q,x,y) %>%
   dplyr::summarise(nuYears = sum(Visited)) %>%
   ungroup() %>%
   left_join(.,environChange,by=c("MTB_Q")) %>%
@@ -653,7 +658,7 @@ spamm2 <- HLCor(cbind(nuYears,totalYears-nuYears) ~ 1 +
 
 #get number of years in which a MTBQ was visited
 samplingSummary <- samplingIntensity %>%
-  dplyr::group_by(MTB_Q) %>%
+  dplyr::group_by(MTB_Q,x,y) %>%
   dplyr::summarise(nuYears = sum(Visited)) %>%
   ungroup() %>%
   left_join(.,environChange,by=c("MTB_Q")) %>%
