@@ -36,7 +36,8 @@ amphisL <-
               size=1.5,
               se=FALSE)+
   theme_few()+
-  theme(legend.position = c(0.1,0.75))+
+  ylim(0,1)+
+  theme(legend.position = c(0.15,0.75))+
   theme(legend.key.height = unit(0.275, 'cm'),
         legend.key.width = unit(0.15, 'cm'))+
   scale_color_viridis_c("Year")+
@@ -112,6 +113,7 @@ buttL <- ggplot(samplingIntensity_Group,
               size=1.5,
               se=FALSE)+
   theme_few()+
+  ylim(0,1)+
   theme(legend.position="none")+
   scale_color_viridis_c("Year")+
   xlab("Urban cover (%)")+ylab("Visit probability")
@@ -181,6 +183,7 @@ birdsL <- ggplot(samplingIntensity_Group,
               size=1.5,
               se=FALSE)+
   theme_few()+
+  ylim(0,1)+
   theme(legend.position = "none")+
   scale_color_viridis_c("Year")+
   xlab("Urban cover (%)")+ylab("Visit probability")
@@ -278,6 +281,7 @@ amphisL <-
               size=1.5,
               se=FALSE)+
   theme_few()+
+  ylim(0,1)+
   theme(legend.position = c(0.1,0.75))+
   theme(legend.key.height = unit(0.275, 'cm'),
         legend.key.width = unit(0.15, 'cm'))+
@@ -344,6 +348,7 @@ buttL <- ggplot(samplingIntensity_Group,
               size=1.5,
               se=FALSE)+
   theme_few()+
+  ylim(0,1)+
   theme(legend.position="none")+
   scale_color_viridis_c("Year")+
   xlab("Protected area cover (%)")+ylab("Visit probability")
@@ -406,6 +411,7 @@ birdsL <- ggplot(samplingIntensity_Group,
               size=1.5,
               se=FALSE)+
   theme_few()+
+  ylim(0,1)+
   theme(legend.position = "none")+
   scale_color_viridis_c("Year")+
   xlab("Protected area cover (%)")+ylab("Visit probability")
