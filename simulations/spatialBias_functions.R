@@ -110,7 +110,7 @@ extendData <- function(df,beta1=-3,urbanBias=2,change="no_change"){
   next_df$Visits3 <- ifelse(next_df$Site %in% Visits,1,0)
   
   #assume % visited - urban cover overrepresentated
-  probVisit <- plogis(0 + (2*urbanBias) * next_df$urbanCover) 
+  probVisit <- plogis(0 + (3*urbanBias) * next_df$urbanCover) 
   Visits <- sample(x = M,size = nuSamples, prob = probVisit)
   next_df$Visits4 <- ifelse(next_df$Site %in% Visits,1,0)
   
