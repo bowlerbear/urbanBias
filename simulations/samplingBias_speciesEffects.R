@@ -166,7 +166,6 @@ outputCC$Envion_change <- "clustered change"
 outputNeutral <- rbind(outputNC,outputUC,outputCC) 
 outputNeutral$Species <- "Neutral"
 
-
 #### combine all ####
 
 output <- rbind(outputNeutral,outputNegative,outputPositive)
@@ -182,7 +181,7 @@ output_melt$time <- sapply(as.character(output_melt$variable),function(x){
 output_cast <- reshape2::dcast(output_melt,simNu+scenario + Envion_change+Species~time,value.var="value")
 output_cast$Difference2 <- output_cast$Time2/output_cast$Time1
 
-
+#option1
 ggplot(output_cast,aes(x=scenario,y=Difference2))+
   geom_violin(aes(fill=Envion_change, colour=Envion_change),
               position="dodge",draw_quantiles=c(0.25,0.5,0.75),
@@ -197,6 +196,21 @@ ggplot(output_cast,aes(x=scenario,y=Difference2))+
   geom_hline(yintercept=1,linetype="dashed")
 
 
-ggsave("plots/Obs_change_speciesPref.png",width=9,height=3)
+#option2 
+ggplot(output_cast,aes(x=Envion_change,y=Difference2))+
+  geom_violin(aes(fill=scenario, colour=scenario),
+              position="dodge",draw_quantiles=c(0.25,0.5,0.75),
+              alpha=0.5)+
+  theme_few()+
+  ylab("Occupancy change")+
+  facet_wrap(~Species)+
+  scale_fill_brewer("Sampling scenario",labels=c("full","random","bias","bias+"))+
+  scale_color_brewer("Sampling scenario",labels=c("full","random","bias","bias+"))+
+  geom_hline(yintercept=1,linetype="dashed")+
+  theme(axis.text.x = element_text(angle=45, vjust=0.95, hjust=0.95),
+        legend.position="top")+
+  xlab("Urban change")
+
+ggsave("plots/Obs_change_speciesPref.png",width=9,height=5)
 
 ### end ##################################################
