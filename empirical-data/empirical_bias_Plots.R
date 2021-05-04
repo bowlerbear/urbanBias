@@ -581,6 +581,12 @@ gam1 <- gam(cbind(nuYears,totalYears-nuYears) ~ log(change+1) + s(x,y),
             data = samplingSummary)
 summary(gam1)#positive effect
 
+ggplot(subset(samplingSummary,change<0.2),
+       aes(x=change,y=nuYears/totalYears))+
+  geom_point(size=4,alpha=0.4)+
+  stat_smooth(method="glm")+
+  theme_classic()
+
 #with spaMM
 library(spaMM)
 spamm1 <- HLCor(cbind(nuYears,totalYears-nuYears) ~ change + 
