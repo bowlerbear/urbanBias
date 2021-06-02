@@ -1,5 +1,7 @@
 library(ggplot2)
 library(plyr)
+library(tidyverse)
+library(patchwork)
 
 #read in wrapper functions
 source('simulations/spatialBias_functions.R')
@@ -27,9 +29,9 @@ coloursDF$Colours <- colfunc(nrow(coloursDF))
 #### random ###########
 plot_df_uni_change <- df %>%
   left_join(., coloursDF) %>%
-  mutate(facet_label_random=paste0("Random - ", Time)) %>%
-  mutate(facet_label_bias=paste0("Bias - ", Time)) %>%
-  mutate(facet_label_increase_bias=paste0("Increased bias - ", Time))
+  mutate(facet_label_random=paste0("Random - T", Time)) %>%
+  mutate(facet_label_bias=paste0("Bias - T", Time)) %>%
+  mutate(facet_label_increase_bias=paste0("Bias+ - T", Time))
 
 random_uniform <- ggplot()+
   geom_tile(data=plot_df_uni_change, aes(x = sim, y = Site, fill = urbanCover))+
@@ -44,7 +46,8 @@ random_uniform <- ggplot()+
   theme(panel.grid.minor=element_blank())+
   xlab("") + 
   ylab("") + 
-  theme(legend.position="none")
+  theme(legend.position="none")+
+  theme(axis.text=element_blank())
 random_uniform
 
 bias_uniform <- ggplot()+
@@ -60,7 +63,8 @@ bias_uniform <- ggplot()+
   theme(panel.grid.minor=element_blank())+
   xlab("") + 
   ylab("") + 
-  theme(legend.position="none")
+  theme(legend.position="none")+
+  theme(axis.text=element_blank())
 bias_uniform
 
 increase_bias_uniform <- ggplot()+
@@ -76,7 +80,8 @@ increase_bias_uniform <- ggplot()+
   theme(panel.grid.minor=element_blank())+
   xlab("Replicate") + 
   ylab("") + 
-  theme(legend.position="none")
+  theme(legend.position="none")+
+  theme(axis.text=element_blank())
 increase_bias_uniform
 
 random_uniform + bias_uniform + increase_bias_uniform + plot_layout(ncol=1)
@@ -93,16 +98,17 @@ df <- ldply(1:20,function(x){
 
 #specify green and grey colour gradient
 library(dichromat)
-colfunc <- colorRampPalette(c("#238B45", "#74C476", "grey80", "gray50", "gray30", "grey5"))
+colfunc <- colorRampPalette(c("#006D2C", "#41AB5D", "#A1D99B", "grey80", "gray50", "gray30", "grey1"))
+#colfunc <- colorRampPalette(c("#238B45", "#74C476", "grey80", "gray50", "gray30", "grey5"))
 coloursDF <- unique(df[,c('urbanCover',"Time")])
 coloursDF <- arrange(coloursDF,urbanCover)
 coloursDF$Colours <- colfunc(nrow(coloursDF))
 
 plot_df_clust_change <- df %>%
   left_join(., coloursDF) %>%
-  mutate(facet_label_random=paste0("Random - ", Time)) %>%
-  mutate(facet_label_bias=paste0("Bias - ", Time)) %>%
-  mutate(facet_label_increase_bias=paste0("Increased bias - ", Time))
+  mutate(facet_label_random=paste0("Random - T", Time)) %>%
+  mutate(facet_label_bias=paste0("Bias - T", Time)) %>%
+  mutate(facet_label_increase_bias=paste0("Bias+ - T", Time))
 
 random_clust <- ggplot()+
   geom_tile(data=plot_df_clust_change, aes(x = sim, y = Site, fill = urbanCover))+
@@ -117,7 +123,8 @@ random_clust <- ggplot()+
   theme(panel.grid.minor=element_blank())+
   xlab("") + 
   ylab("") + 
-  theme(legend.position="none")
+  theme(legend.position="none")+
+  theme(axis.text=element_blank())
 random_clust
 
 bias_clust <- ggplot()+
@@ -133,7 +140,8 @@ bias_clust <- ggplot()+
   theme(panel.grid.minor=element_blank())+
   xlab("") + 
   ylab("") + 
-  theme(legend.position="none")
+  theme(legend.position="none")+
+  theme(axis.text=element_blank())
 bias_clust
 
 increase_bias_clust <- ggplot()+
@@ -149,7 +157,8 @@ increase_bias_clust <- ggplot()+
   theme(panel.grid.minor=element_blank())+
   xlab("") + 
   ylab("") + 
-  theme(legend.position="none")
+  theme(legend.position="none")+
+  theme(axis.text=element_blank())
 increase_bias_clust
 
 random_clust + bias_clust + increase_bias_clust + plot_layout(ncol=1)
@@ -168,15 +177,16 @@ df <- ldply(1:20,function(x){
 #specify green and grey colour gradient
 library(dichromat)
 colfunc <- colorRampPalette(c("#238B45", "#74C476", "grey80", "gray50", "gray30", "grey5"))
+#colfunc <- colorRampPalette(c("#238B45", "#74C476", "grey80", "gray50", "gray30", "grey5"))
 coloursDF <- unique(df[,c('urbanCover',"Time")])
 coloursDF <- arrange(coloursDF,urbanCover)
 coloursDF$Colours <- colfunc(nrow(coloursDF))
 
 plot_df_none_change <- df %>%
   left_join(., coloursDF) %>%
-  mutate(facet_label_random=paste0("Random - ", Time)) %>%
-  mutate(facet_label_bias=paste0("Bias - ", Time)) %>%
-  mutate(facet_label_increase_bias=paste0("Increased bias - ", Time))
+  mutate(facet_label_random=paste0("Random - T", Time)) %>%
+  mutate(facet_label_bias=paste0("Bias - T", Time)) %>%
+  mutate(facet_label_increase_bias=paste0("Bias+ - T", Time))
 
 random_none <- ggplot()+
   geom_tile(data=plot_df_none_change, aes(x = sim, y = Site, fill = urbanCover))+
@@ -191,7 +201,8 @@ random_none <- ggplot()+
   theme(panel.grid.minor=element_blank())+
   xlab("") + 
   ylab("") + 
-  theme(legend.position="none")
+  theme(legend.position="none")+
+  theme(axis.text=element_blank())
 random_none
 
 bias_none <- ggplot()+
@@ -207,7 +218,8 @@ bias_none <- ggplot()+
   theme(panel.grid.minor=element_blank())+
   xlab("") + 
   ylab("Site") + 
-  theme(legend.position="none")
+  theme(legend.position="none")+
+  theme(axis.text=element_blank())
 bias_none
 
 increase_bias_none <- ggplot()+
@@ -223,7 +235,8 @@ increase_bias_none <- ggplot()+
   theme(panel.grid.minor=element_blank())+
   xlab("") + 
   ylab("") + 
-  theme(legend.position="none")
+  theme(legend.position="none")+
+  theme(axis.text=element_blank())
 increase_bias_none
 
 random_none + bias_none + increase_bias_none + plot_layout(ncol=1)
