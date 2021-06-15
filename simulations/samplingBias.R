@@ -5,13 +5,7 @@ library(ggthemes)
 
 source('simulations/spatialBias_functions.R')
 
-#test the effect of the following possible options 
-#- include covariate in state model (i.e. predict response at unsampled sites based on pattern in response at sampled sites)
-#- include covariate in new site visitation model (i.e., predict which sites are overrepresented and downweight them)
-#- which is better???
-
-#as above:
-#- include geographic coordinates as proxy for the covariate
+#simulate occupancy data under different scenarios of urban cover change and sampling strategies
 
 ### static scenario #######################################################
 
