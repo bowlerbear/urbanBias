@@ -213,4 +213,64 @@ ggplot(output_cast,aes(x=Envion_change,y=Difference2))+
 
 ggsave("plots/Obs_change_speciesPref.png",width=9,height=5)
 
+
+### over range of values ###################################
+
+#plot relationship between strength of the association
+#and the degree of bias
+#need to look at the effects on each time step
+
+betaRange <- rep(seq(-3,3,by=0.1),1000)
+
+
+outputNC <- ldply(betaRange,function(i){
+  
+  df <- generateData(beta1=i)
+  next_df <- extendData(df,beta1=i,change="no_change")
+  #get proportion of sites observed to be occupied
+  temp <- getObsProp(next_df)
+  temp$beta <- i
+  return(temp)
+})
+
+outputUC <- ldply(betaRange,function(i){
+  
+  df <- generateData(beta1=i)
+  next_df <- extendData(df,beta1=i,change="uniform_change")
+  #get proportion of sites observed to be occupied
+  temp <- getObsProp(next_df)
+  temp$beta <- i
+  return(temp)
+})
+
+outputCC <- ldply(betaRange,function(i){
+  
+  df <- generateData(beta1=i)
+  next_df <- extendData(df,beta1=i,change="clustered_change")
+  #get proportion of sites observed to be occupied
+  temp <- getObsProp(next_df)
+  temp$beta <- i
+  return(temp)
+})
+
+
+# Plotting time points 2
+plot1 <- plotBiasT2(outputNC, mytitle="No urban change")+ylim(-0.8,0.36)
+plot2 <- plotBiasT2(outputUC, mytitle="Uniform urban change")+ylim(-0.8,0.36)
+plot3 <- plotBiasT2(outputCC, mytitle = "Clustered urban change")+ylim(-0.8,0.36)
+
+plot_grid(plot1,plot2,plot3, ncol=3)
+
+ggsave("plots/Bias_plot_speciesEffects_T2.png",width=11,height=3)
+
+
+#Plotting occupancy change 
+#logit difference
+plot1 <- plotBias(outputNC, mytitle="No urban change") + ylim(-1.3,1.3)
+plot2 <- plotBias(outputUC, mytitle="Uniform urban change")+ ylim(-1.3,1.3)
+plot3 <- plotBias(outputCC, mytitle = "Clustered urban change")+ ylim(-1.3,1.3)
+plot_grid(plot1,plot2,plot3, ncol=3)
+
+ggsave("plots/Bias_plot_speciesEffects.png",width=11,height=3)
+
 ### end ##################################################
