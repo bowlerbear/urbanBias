@@ -1,11 +1,19 @@
-generateData <- function(M=500,nuSamples=100, beta1=-3,urbanBias=2){
+generateData <- function(M=500,nuSamples=100, beta1=-2,urbanBias=2){
   
   # M is the number of sites
-  #beta1 is the regression coefficient of urban cover
   
   #State process - occupancy is affected by urban cover
+  
+  #% between 0 and 1
+  #shift 0 to 1 to -0.5 to 0.5
+  #urbanCover <- seq(-0.5, 0.3,length.out = M)
+  
+  #or random between -1 and 1
   urbanCover <- seq(-1, 1,length.out = M)
-  beta0 <- 0  # Logit-scale intercept vegHt
+
+  #simulate the relationships  
+  beta0 <- 0  
+  #beta1 is the regression coefficient of urban cover
   psi <- plogis(beta0 + beta1 * urbanCover) # Occupancy probability
   #plot(urbanCover, psi, ylim = c(0,1), type = "l", lwd = 3) 
   
@@ -25,18 +33,20 @@ generateData <- function(M=500,nuSamples=100, beta1=-3,urbanBias=2){
   #assume % visited - at random
   probVisit <- rep(plogis(0),M) 
   Visits <- sample(x = M,size = nuSamples, prob = probVisit)
+  #Visits <- df$Site[rbinom(M,1,probVisit)==1]
   df$Visits2 <- ifelse(df$Site %in% Visits,1,0)
   
   #assume % visited - urban cover overrepresentated
   probVisit <- plogis(0 + (urbanBias) * urbanCover) 
   Visits <- sample(x = M,size = nuSamples, prob = probVisit)
+  #Visits <- df$Site[rbinom(M,1,probVisit)==1]
   df$Visits3 <- ifelse(df$Site %in% Visits,1,0)
   
   #assume % visited - urban cover overrepresentated
   probVisit <- plogis(0 + (urbanBias) * urbanCover) 
   Visits <- sample(x = M,size = nuSamples, prob = probVisit)
+  #Visits <- df$Site[rbinom(M,1,probVisit)==1]
   df$Visits4 <- ifelse(df$Site %in% Visits,1,0)
-  
   
   df$Time <- 1
   
@@ -64,7 +74,7 @@ plotVisits <- function(df){
   gridExtra::grid.arrange(grobs = plotList)
 }
 
-extendData <- function(df,beta1=-3,urbanBias=2,change="no_change"){
+extendData <- function(df,beta1=-2,urbanBias=2,change="no_change"){
   
   M = length(unique(df$Site))
   nuSamples = sum(df$Visits2==1)
@@ -78,16 +88,35 @@ extendData <- function(df,beta1=-3,urbanBias=2,change="no_change"){
   
   #is there a change in urban cover
   if(change=="no_change"){
+    
     next_df$urbanCover <- next_df$urbanCover
+    
   }else if(change=="uniform_change"){
-    next_df$urbanCover <- next_df$urbanCover  + 0.2 
+    
+    next_df$urbanCover <- next_df$urbanCover + 0.2 
+    
   }else if(change=="clustered_change"){
+    
     #more urbanization of high urban sites
     next_df$urbanCover[next_df$urbanCover>0] <- 
       next_df$urbanCover[next_df$urbanCover>0] + 0.4
+    
+  }else if(change=="clustered_change2"){
+    
+    #more urbanization of high urban sites
+    totalUrban <- M * 0.2
+    urbanDF <- df[,c("Site","urbanCover")]
+    urbanDF <- dplyr::arrange(df,desc(urbanCover))
+    urbanDF$green <- 0.5-urbanDF$urbanCover
+    urbanDF$cumsum <- cumsum(urbanDF$green)
+    lastSite <- max(which(urbanDF$cumsum < totalUrban))
+    remainder <- totalUrban - urbanDF$cumsum[lastSite]
+    urbanDF$urbanCover[1:lastSite] <- 0.5
+    urbanDF$urbanCover[lastSite+1] <- urbanDF$urbanCover[lastSite+1] + remainder
+    next_df$urbanCover <- urbanDF$urbanCover[match(next_df$Site,urbanDF$Site)]
+    
   }
   
-
   #generate new observations
   beta0 = 0
   next_df$psi <- plogis(beta0 + beta1 * next_df$urbanCover) 
@@ -96,24 +125,32 @@ extendData <- function(df,beta1=-3,urbanBias=2,change="no_change"){
   #revisit each site
   ### visitation model (1 = a site is visited)
   
+  #rescale so that the median urban cover is still zero
+  medianUrbanChange <- median(next_df$urbanCover)
+  next_df$urbanCover <- next_df$urbanCover - medianUrbanChange
+  
   #assume all sites are visited
   next_df$Visits1 <- rep(1,M)
   
   #assume % visited - at random
   probVisit <- rep(plogis(0),M) 
   Visits <- sample(x = M,size = nuSamples, prob = probVisit)
+  #Visits <- df$Site[rbinom(M,1,probVisit)==1]
   next_df$Visits2 <- ifelse(next_df$Site %in% Visits,1,0)
   
   #assume % visited - urban cover overrepresentated
   probVisit <- plogis(0 + (urbanBias) * next_df$urbanCover) 
   Visits <- sample(x = M,size = nuSamples, prob = probVisit)
+  #Visits <- df$Site[rbinom(M,1,probVisit)==1]
   next_df$Visits3 <- ifelse(next_df$Site %in% Visits,1,0)
   
   #assume % visited - urban cover overrepresentated
   probVisit <- plogis(0 + (3*urbanBias) * next_df$urbanCover) 
   Visits <- sample(x = M,size = nuSamples, prob = probVisit)
+  #Visits <- df$Site[rbinom(M,1,probVisit)==1]
   next_df$Visits4 <- ifelse(next_df$Site %in% Visits,1,0)
   
+  next_df$urbanCover <- next_df$urbanCover + medianUrbanChange
   next_df$Time <- df$Time + 1
   df <- rbind(df,next_df)
   
@@ -167,7 +204,6 @@ fitDynamic <- function(next_df){
   plyr::ldply(1:4,function(i){
     glm1 <- glmer(z ~ Time + (1|Site), 
                 data = next_df[next_df[,paste0("Visits",i)]==1,],family=binomial)
-    
     
     pred1 <- predict(glm1,newdata=data.frame(Time=1),re.form=NA,type="response")
     pred2 <- predict(glm1,newdata=data.frame(Time=2),re.form=NA,type="response")
@@ -655,6 +691,17 @@ getObsProp <- function(next_df){
              Visit4_Time2_prop = mean(next_df$z[next_df$Visits4==1 & next_df$Time==2]))
 }
 
+getObsNu <- function(next_df){
+  data.frame(Visit1_Time1_nu = length(next_df$z[next_df$Visits1==1 & next_df$Time==1]),
+             Visit2_Time1_nu = length(next_df$z[next_df$Visits2==1 & next_df$Time==1]),
+             Visit3_Time1_nu = length(next_df$z[next_df$Visits3==1 & next_df$Time==1]),
+             Visit4_Time1_nu = length(next_df$z[next_df$Visits4==1 & next_df$Time==1]),
+             Visit1_Time2_nu = length(next_df$z[next_df$Visits1==1 & next_df$Time==2]),
+             Visit2_Time2_nu = length(next_df$z[next_df$Visits2==1 & next_df$Time==2]),
+             Visit3_Time2_nu = length(next_df$z[next_df$Visits3==1 & next_df$Time==2]),
+             Visit4_Time2_nu = length(next_df$z[next_df$Visits4==1 & next_df$Time==2]))
+}
+
 
 plotObsProp <- function(outputNC,mytitle){
   
@@ -680,32 +727,6 @@ plotObsProp <- function(outputNC,mytitle){
 }
 
 
-plotObsChange <- function(outputNC){
-  
-  outputNC$simNu <- 1:nrow(outputNC)
-  outputNC_melt <- reshape2::melt(outputNC,id="simNu")
-  outputNC_melt$scenario <- sapply(as.character(outputNC_melt$variable),function(x){
-    strsplit(x,"_")[[1]][1]})
-  outputNC_melt$time <- sapply(as.character(outputNC_melt$variable),function(x){
-    strsplit(x,"_")[[1]][2]})
-  outputNC_cast <- reshape2::dcast(outputNC_melt,simNu+scenario~time,value.var="value")
-  
-  outputNC_cast$Difference <- outputNC_cast$Time2 -  outputNC_cast$Time1
-  require(boot)
-  outputNC_cast$Difference2 <- logit(outputNC_cast$Time2) - logit(outputNC_cast$Time1)
-  outputNC_cast$Difference2 <- outputNC_cast$Time2/outputNC_cast$Time1
-  
-  ggplot(outputNC_cast,aes(x=scenario,y=Difference2))+
-    geom_violin(position="dodge",draw_quantiles=c(0.25,0.5,0.75),
-                alpha=0.5)+
-    theme_few()+
-    scale_x_discrete("Sampling scenario", labels = c("Visit1" = "Full","Visit2" = "Random",
-                                                     "Visit3" = "Bias","Visit4" = "Bias+"))+
-    ylab("Occupancy change")+
-    geom_hline(yintercept=1,linetype="dashed")
-  
-}
-
 plotObsProp_P <- function(outputNC,mytitle){
   
   outputNC_melt <- reshape2::melt(outputNC)
@@ -728,3 +749,142 @@ plotObsProp_P <- function(outputNC,mytitle){
     labs(subtitle = mytitle)
   
 }
+
+plotObsNu <- function(outputNC,mytitle){
+  
+  outputNC_melt <- reshape2::melt(outputNC)
+  outputNC_melt$scenario <- sapply(as.character(outputNC_melt$variable),function(x){
+    strsplit(x,"_")[[1]][1]})
+  outputNC_melt$time <- sapply(as.character(outputNC_melt$variable),function(x){
+    strsplit(x,"_")[[1]][2]})
+  outputNC_melt$time <- ifelse(outputNC_melt$time=="Time1","1","2")
+  
+  ggplot(outputNC_melt,aes(x=scenario,y=value,fill=time))+
+    geom_violin(position="dodge",draw_quantiles=c(0.25,0.5,0.75),
+                alpha=0.5)+
+    theme_few()+
+    scale_fill_manual("Time point", values = c("lightblue","blue"))+
+    scale_x_discrete("Sampling scenario", labels = c("Visit1" = "Full","Visit2" = "Random",
+                                                     "Visit3" = "Bias","Visit4" = "Bias+"))+
+    ylab("Nu sites")+
+    theme(legend.position = c(0.85,0.85),legend.key.size=unit(0.5,"line"),
+          legend.title = (element_text(size=10)))+
+    labs(subtitle = mytitle)
+  
+}
+
+
+plotObsChange <- function(outputNC){
+  
+  outputNC$simNu <- 1:nrow(outputNC)
+  outputNC_melt <- reshape2::melt(outputNC,id="simNu")
+  outputNC_melt$scenario <- sapply(as.character(outputNC_melt$variable),function(x){
+    strsplit(x,"_")[[1]][1]})
+  outputNC_melt$time <- sapply(as.character(outputNC_melt$variable),function(x){
+    strsplit(x,"_")[[1]][2]})
+  outputNC_cast <- reshape2::dcast(outputNC_melt,simNu+scenario~time,value.var="value")
+  
+  outputNC_cast$Difference <- outputNC_cast$Time2 -  outputNC_cast$Time1
+  outputNC_cast$Difference2 <- boot::logit(outputNC_cast$Time2) - boot::logit(outputNC_cast$Time1)
+  #outputNC_cast$Difference2 <- log(outputNC_cast$Time2/outputNC_cast$Time1)
+  
+  ggplot(outputNC_cast,aes(x=scenario,y=Difference2))+
+    geom_violin(position="dodge",draw_quantiles=c(0.25,0.5,0.75),
+                alpha=0.5)+
+    theme_few()+
+    scale_x_discrete("Sampling scenario", labels = c("Visit1" = "Full","Visit2" = "Random",
+                                                     "Visit3" = "Bias","Visit4" = "Bias+"))+
+    ylab("Occupancy change")+
+    geom_hline(yintercept=0,linetype="dashed")
+  
+}
+
+
+
+
+#function to get differences of Visit3 and Visit 4 from Visit1 at each time step
+getDifferences <- function(outputNC){
+  outputNC$Visit_4diff_Time1 <- log(outputNC$Visit4_Time1_prop/outputNC$Visit1_Time1_prop)
+  outputNC$Visit_3diff_Time1 <- log(outputNC$Visit3_Time1_prop/outputNC$Visit1_Time1_prop)
+  outputNC$Visit_4diff_Time2 <- log(outputNC$Visit4_Time2_prop/outputNC$Visit1_Time2_prop)
+  outputNC$Visit_3diff_Time2 <- log(outputNC$Visit3_Time2_prop/outputNC$Visit1_Time2_prop)
+  return(outputNC)
+}
+
+plotBiasT2 <- function(outputNC,mytitle){
+  
+  outputNC <- getDifferences(outputNC)[,9:13]
+  
+  outputNC_melt <- reshape::melt(outputNC,id="beta")
+  outputNC_melt$Time <- as.factor(sapply(as.character(outputNC_melt$variable),
+                               function(x)strsplit(x,"_")[[1]][3]))
+  levels(outputNC_melt$Time) <- c("1","2")
+  
+  outputNC_melt$Sampling <- as.factor(sapply(as.character(outputNC_melt$variable),
+                               function(x)strsplit(x,"_")[[1]][2]))
+  levels(outputNC_melt$Sampling) <- c("Bias","Bias+")
+  
+  outputNC_melt_median <- plyr::ddply(outputNC_melt,.(beta,Time,Sampling),
+                                      summarise,
+                                      value=median(value))
+  
+  ggplot(subset(outputNC_melt_median,Time==2)) +
+    geom_smooth(aes(x=beta,y=value,colour=Sampling),
+                se = FALSE,position=position_dodge(width=0.2))+
+    theme_few()+
+    scale_color_brewer(type="qual")+
+    geom_hline(yintercept = 0) + geom_vline(xintercept = 0)+
+    xlab("Species association with urban cover")+
+    ylab("Bias of occupancy estimate")+
+    theme(legend.position = c(0.8,0.25),legend.key.size=unit(0.7,"line"),
+          legend.title = (element_text(size=12)))+
+    labs(subtitle = mytitle)
+  
+}
+
+
+
+
+getChange <- function(outputUC){
+  require(boot)
+  #change in each
+  outputUC$change1 <- logit(outputUC$Visit1_Time2) - logit(outputUC$Visit1_Time1_prop)
+  outputUC$change3 <- logit(outputUC$Visit3_Time2) - logit(outputUC$Visit3_Time1_prop)
+  outputUC$change4 <- logit(outputUC$Visit4_Time2) - logit(outputUC$Visit4_Time1_prop)
+  
+  #growth rate bias
+  outputUC$change4_bias <- outputUC$change4 - outputUC$change1
+  outputUC$change3_bias <- outputUC$change3 - outputUC$change1  
+  
+  return(outputUC)
+}
+
+plotBias <- function(outputNC,mytitle){
+  
+  outputNC <- getChange(outputNC)[,c(9,13,14)]
+  
+  outputNC_melt <- reshape::melt(outputNC,id="beta")
+
+  outputNC_melt$Sampling <- as.factor(sapply(as.character(outputNC_melt$variable),
+                                             function(x)strsplit(x,"_")[[1]][1]))
+  
+  levels(outputNC_melt$Sampling) <- c("Bias","Bias+")
+  
+  outputNC_melt_median <- plyr::ddply(outputNC_melt,.(beta,Sampling),
+                                      summarise,
+                                      value=median(value))
+  
+  ggplot(outputNC_melt_median) +
+    geom_smooth(aes(x=beta,y=value,colour=Sampling),
+                se = FALSE,position=position_dodge(width=0.2),size=2)+
+    theme_few()+
+    scale_color_brewer(type="qual")+
+    geom_hline(yintercept = 0) + geom_vline(xintercept = 0)+
+    xlab("Species association with urban cover")+
+    ylab("Bias of occupancy change estimate")+
+    theme(legend.position = c(0.8,0.25),legend.key.size=unit(0.7,"line"),
+          legend.title = (element_text(size=12)))+
+    labs(subtitle = mytitle)
+  
+}
+
