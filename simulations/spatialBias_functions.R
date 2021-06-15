@@ -1,4 +1,4 @@
-generateData <- function(M=500,nuSamples=100, beta1=-2,urbanBias=2){
+generateData <- function(M=500,nuSamples=100, beta0 = 0, beta1=-2,urbanBias=2){
   
   # M is the number of sites
   
@@ -12,7 +12,6 @@ generateData <- function(M=500,nuSamples=100, beta1=-2,urbanBias=2){
   urbanCover <- seq(-1, 1,length.out = M)
 
   #simulate the relationships  
-  beta0 <- 0  
   #beta1 is the regression coefficient of urban cover
   psi <- plogis(beta0 + beta1 * urbanCover) # Occupancy probability
   #plot(urbanCover, psi, ylim = c(0,1), type = "l", lwd = 3) 
@@ -65,7 +64,7 @@ fitStatic <- function(df){
   })
 }
 
-extendData <- function(df,beta1=-2,urbanBias=2,change="no_change"){
+extendData <- function(df, beta0 = 0, beta1=-2, urbanBias=2,change="no_change"){
   
   M = length(unique(df$Site))
   nuSamples = sum(df$Visits2==1)
