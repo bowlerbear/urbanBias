@@ -47,10 +47,13 @@ amphisL <-
 #right
 
 #one model
-model1 <- glm(Visited ~ Year * urban, family= binomial, data = samplingIntensity)
+model1 <- glm(Visited ~ I(Year-1991) * urban, family= binomial, data = samplingIntensity)
 summary(model1)
 
-model1 <- gam(Visited ~ Year * urban + s(x,y), family= binomial, data = samplingIntensity)
+model1 <- gam(Visited ~ urban + s(x,y), family= binomial, data = samplingIntensity)
+summary(model1)
+
+model1 <- gam(Visited ~ I(Year-1991) * urban + s(x,y), family= binomial, data = samplingIntensity)
 summary(model1)
 
 #separate models
@@ -125,7 +128,10 @@ myYears <- sort(unique(samplingIntensity$Year))
 model1 <- glm(Visited ~ Year * urban, family= binomial, data = samplingIntensity)
 summary(model1)
 
-model1 <- gam(Visited ~ Year * urban + s(x,y), family= binomial, data = samplingIntensity)
+model1 <- gam(Visited ~ urban + s(x,y), family= binomial, data = samplingIntensity)
+summary(model1)
+
+model1 <- gam(Visited ~ I(Year-1991) * urban + s(x,y), family= binomial, data = samplingIntensity)
 summary(model1)
 
 #as glm
@@ -193,7 +199,10 @@ birdsL <- ggplot(samplingIntensity_Group,
 model1 <- glm(Visited ~ Year * urban, family= binomial, data = samplingIntensity)
 summary(model1)#positive
 
-model1 <- gam(Visited ~ Year * urban +s(x,y), family= binomial, data = samplingIntensity)
+model1 <- gam(Visited ~ urban +s(x,y), family= binomial, data = samplingIntensity)
+summary(model1)#positive
+
+model1 <- gam(Visited ~ I(Year-1991) * urban +s(x,y), family= binomial, data = samplingIntensity)
 summary(model1)#positive
 
 # year as a factor
@@ -294,7 +303,10 @@ amphisL <-
 model1 <- glm(Visited ~ Year * PA_area, family= binomial, data = samplingIntensity)
 summary(model1)#sig neg
 
-model1 <- gam(Visited ~ Year * PA_area +s(x,y), family= binomial, data = samplingIntensity)
+model1 <- glm(Visited ~PA_area, family= binomial, data = samplingIntensity)
+summary(model1)#sig neg
+
+model1 <- gam(Visited ~ I(Year-1992) * PA_area +s(x,y), family= binomial, data = samplingIntensity)
 summary(model1)#sig neg
 
 #separate models
@@ -357,7 +369,12 @@ buttL <- ggplot(samplingIntensity_Group,
 #one model
 model1 <- glm(Visited ~ Year * PA_area, family= binomial, data = samplingIntensity)
 summary(model1)#no effect
-model1 <- gam(Visited ~ Year * PA_area + s(x,y), family= binomial, data = samplingIntensity)
+
+
+model1 <- glm(Visited ~ PA_area, family= binomial, data = samplingIntensity)
+summary(model1)
+
+model1 <- gam(Visited ~ I(Year-1992) * PA_area + s(x,y), family= binomial, data = samplingIntensity)
 summary(model1)
 
 #right
@@ -422,7 +439,10 @@ birdsL <- ggplot(samplingIntensity_Group,
 model1 <- glm(Visited ~ Year * PA_area, family= binomial, data = samplingIntensity)
 summary(model1)#negative
 
-model1 <- gam(Visited ~ Year * PA_area + s(x,y), family= binomial, data = samplingIntensity)
+model1 <- glm(Visited ~ PA_area, family= binomial, data = samplingIntensity)
+summary(model1)#negative
+
+model1 <- gam(Visited ~ I(Year-1991) * PA_area + s(x,y), family= binomial, data = samplingIntensity)
 summary(model1)#negative
 
 # year as a factor
@@ -533,7 +553,7 @@ table(environChange$landCover.x)
 #urbanChange        4278
 #waterChange          79
 
-qplot(urbanChange,change,data=environChange)
+qplot(urbanChange,cropChange,data=environChange)
 
 ### amphibians ##############
 
@@ -572,6 +592,16 @@ amphiModel <- glm1
 #as gam
 library(mgcv)
 gam1 <- gam(cbind(nuYears,totalYears-nuYears) ~ change + s(x,y), 
+            family ="binomial", 
+            data = samplingSummary)
+summary(gam1)
+
+gam1 <- gam(cbind(nuYears,totalYears-nuYears) ~ urbanChange + s(x,y), 
+            family ="binomial", 
+            data = samplingSummary)
+summary(gam1)#positive effect
+
+gam1 <- gam(cbind(nuYears,totalYears-nuYears) ~ cropChange + s(x,y), 
             family ="binomial", 
             data = samplingSummary)
 summary(gam1)#positive effect
@@ -643,6 +673,16 @@ gam1 <- gam(cbind(nuYears,totalYears-nuYears) ~ change + s(x,y),
             data = samplingSummary)
 summary(gam1)#positive effect
 
+gam1 <- gam(cbind(nuYears,totalYears-nuYears) ~ urbanChange + s(x,y), 
+            family ="binomial", 
+            data = samplingSummary)
+summary(gam1)#positive effect
+
+gam1 <- gam(cbind(nuYears,totalYears-nuYears) ~ cropChange + s(x,y), 
+            family ="binomial", 
+            data = samplingSummary)
+summary(gam1)#positive effect
+
 #with spaMM
 library(spaMM)
 spamm1 <- HLCor(cbind(nuYears,totalYears-nuYears) ~ change + 
@@ -683,6 +723,10 @@ glm1 <- glm(cbind(nuYears,totalYears-nuYears) ~ urbanChange,
             data = samplingSummary)
 summary(glm1)#positive effect
 
+predict(glm1,newdata=data.frame(urbanChange=0),type="response")
+predict(glm1,newdata=data.frame(urbanChange=max(samplingSummary$urbanChange)),
+        type="response")
+
 #change
 glm1 <- glm(cbind(nuYears,totalYears-nuYears) ~ change, 
             family ="binomial", 
@@ -701,6 +745,19 @@ gam1 <- gam(cbind(nuYears,totalYears-nuYears) ~ change + s(x,y),
             family ="binomial", 
             data = samplingSummary)
 summary(gam1)#positive effect
+
+gam1 <- gam(cbind(nuYears,totalYears-nuYears) ~ urbanChange + s(x,y), 
+            family ="binomial", 
+            data = samplingSummary)
+summary(gam1)#positive effect
+
+gam1 <- gam(cbind(nuYears,totalYears-nuYears) ~ cropChange + s(x,y), 
+            family ="binomial", 
+            data = samplingSummary)
+summary(gam1)#positive effect
+
+
+
 
 #with spaMM
 library(spaMM)
