@@ -65,15 +65,6 @@ fitStatic <- function(df){
   })
 }
 
-plotVisits <- function(df){
-  require(cowplot)
-  plotList <- lapply(1:4,function(i){
-    ggplot(df)+
-      geom_line(aes(x=urbanCover,y=df[,paste0("VisitPreds",i)]))+ ylab(paste0("VisitPreds",i))+ylim(0,1)
-  })
-  gridExtra::grid.arrange(grobs = plotList)
-}
-
 extendData <- function(df,beta1=-2,urbanBias=2,change="no_change"){
   
   M = length(unique(df$Site))
@@ -645,6 +636,17 @@ fitOccuDynamic <- function(next_df,model="simulation_bias_change_intercepts.txt"
 
 
 
+plotVisits <- function(df){
+  require(cowplot)
+  plotList <- lapply(1:4,function(i){
+    ggplot(df)+
+      geom_line(aes(x=urbanCover,y=df[,paste0("VisitPreds",i)]))+ ylab(paste0("VisitPreds",i))+ylim(0,1)
+  })
+  gridExtra::grid.arrange(grobs = plotList)
+}
+
+
+
 plotEffects <- function(output){
   
   ggplot(output)+
@@ -888,3 +890,56 @@ plotBias <- function(outputNC,mytitle){
   
 }
 
+plotTrends <- function(outputNC,mytitle="No urban change"){
+  
+  ggplot(outputNC)+
+    geom_violin(aes(x=scenario,y=change_coef),trim = TRUE,
+                draw_quantiles = c(0.25,0.5,0.75))+
+    theme_few()+
+    theme(legend.position = "none")+
+    geom_hline(yintercept=0,linetype="dashed")+
+    ylab("Occupancy change estimate")+
+    ylim(-3,1.2)+
+    theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
+    scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
+                                                     "3" = "Bias","4" = "Bias+"))+
+    labs(subtitle = mytitle)
+}
+
+
+plotPower <- function(powerNC,mytitle = "No urban change"){
+  ggplot(powerNC)+
+    geom_bar(aes(x=scenario,y=nuSigs),stat="identity",fill="grey")+
+    theme_few()+
+    xlab("sampling scenario")+
+    ylab("Type 1 error rate")+
+    labs(subtitle = mytitle)+
+    theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
+    scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
+                                                     "3" = "Bias","4" = "Bias+"))
+}
+
+plotUrbanDistr <- function(sampleBiasUC, mytitle="Uniform urban change"){
+  ggplot(sampleBiasUC)+
+    geom_density(aes(urban_diff,fill=scenario),alpha=0.2)+
+    theme_few()+
+    labs(subtitle = mytitle)+
+    scale_fill_discrete("Scenario")+
+    xlab("Sampled urban change") + ylab("Density")+
+    theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
+          legend.position=c(0.845,0.85),legend.key.size=unit(0.35,"line"),
+          legend.title = (element_text(size=8)),legend.text = (element_text(size=8)))
+}
+
+plotUrbanMean <- function(sampleBiasNC, mytitle = "No urban change"){
+  ggplot(sampleBiasNC)+
+    geom_violin(aes(x=scenario,y=urban_median,fill=factor(time)),alpha=0.2,
+                draw_quantiles = c(0.25,0.5,0.75))+
+    theme_few()+
+    scale_fill_manual("Time point", values = c("lightblue","blue"))+
+    labs(subtitle = mytitle)+
+    xlab("Sampling scenario") + ylab ("Sampled urban cover")+
+    theme(legend.position = c(0.23,0.83),legend.key.size=unit(0.7,"line"),
+          legend.title = (element_text(size=12)))
+  
+}
