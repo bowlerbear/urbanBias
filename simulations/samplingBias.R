@@ -62,11 +62,6 @@ plot_grid(plot1,plot2,ncol=1,align='v',
 
 ggsave("plots/Obs_change.png",width=10.5,height=6)
 
-#absolute difference varies
-#logit difference also varies
-#but relative (ratio) change in the same
-#for 1 to 3 under uniform change
-
 ### trends ############################################
 
 #no change in bias
@@ -88,45 +83,10 @@ outputCC <- ldply(1:1000,function(i){
   fitDynamic(next_df)
 })
 
-g1 <- ggplot(outputNC)+
-  geom_violin(aes(x=scenario,y=change_coef),trim = TRUE,
-              draw_quantiles = c(0.25,0.5,0.75))+
-  theme_few()+
-  theme(legend.position = "none")+
-  geom_hline(yintercept=0,linetype="dashed")+
-  ylab("Occupancy change estimate")+
-  ylim(-3,1.2)+
-  theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
-  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
-                                                   "3" = "Bias","4" = "Bias+"))+
-  labs(subtitle = "No urban change")
 
-
-g2 <- ggplot(outputUC)+
-  geom_violin(aes(x=scenario,y=change_coef),trim = TRUE,
-              draw_quantiles = c(0.25,0.5,0.75))+
-  theme_few()+
-  theme(legend.position = "none")+
-  geom_hline(yintercept=0,linetype="dashed")+
-  ylab("Occupancy change estimate")+
-  ylim(-3,1.2)+
-  theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
-  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
-                                                   "3" = "Bias","4" = "Bias+"))+
-  labs(subtitle = "Uniform urban change")
-
-g3 <- ggplot(outputCC)+
-  geom_violin(aes(x=scenario,y=change_coef),trim = TRUE,
-              draw_quantiles = c(0.25,0.5,0.75))+
-  theme_few()+
-  theme(legend.position = "none")+
-  geom_hline(yintercept=0,linetype="dashed")+
-  ylab("Occupancy change estimate")+
-  ylim(-3,1.2)+
-  theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
-  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
-                                                   "3" = "Bias","4" = "Bias+"))+
-  labs(subtitle = "Clustered urban change")
+g1 <- plotTrends(outputNC, mytitle="No urban change")
+g2 <- plotTrends(outputUC, mytitle="Uniform urban change")
+g3 <- plotTrends(outputUC, mytitle="Clustered urban change")
 
 plot_grid(g1,g2,g3,nrow=1)
 
@@ -139,35 +99,9 @@ powerUC <- ddply(outputUC,"scenario",summarise,nuSigs=mean(change_p<0.05))
 powerCC <- ddply(outputCC,"scenario",summarise,nuSigs=mean(change_p<0.05))
 
 
-p1 <- ggplot(powerNC)+
-  geom_bar(aes(x=scenario,y=nuSigs),stat="identity",fill="grey")+
-  theme_few()+
-  xlab("sampling scenario")+
-  ylab("Type 1 error rate")+
-  labs(subtitle = "No urban change")+
-  theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
-  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
-                                                   "3" = "Bias","4" = "Bias+"))
-
-p2 <- ggplot(powerUC)+
-  geom_bar(aes(x=scenario,y=(1-nuSigs)),stat="identity",fill="grey")+
-  theme_few()+
-  xlab("sampling scenario")+
-  ylab("Type II erorr rate")+
-  labs(subtitle = "Uniform urban change")+
-  theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
-  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
-                                                   "3" = "Bias","4" = "Bias+"))
-
-p3 <- ggplot(powerCC)+
-  geom_bar(aes(x=scenario,y=(1-nuSigs)),stat="identity",fill="grey")+
-  theme_few()+
-  xlab("sampling scenario")+
-  ylab("Type II error rate")+
-  labs(subtitle = "Clustered urban change")+
-  theme(plot.subtitle = element_text(vjust=2,hjust=0.02))+
-  scale_x_discrete("Sampling scenario", labels = c("1" = "Full","2" = "Random",
-                                                   "3" = "Bias","4" = "Bias+"))
+p1 <- plotPower(powerNC, mytitle="No urban change")
+p2 <- plotPower(powerUC, mytitle="Uniform urban change")
+p3 <- plotPower(powerCC, mytitle="Clustered urban change")
 
 plot_grid(p1,p2,p3,nrow=1)
 
@@ -175,17 +109,6 @@ ggsave("plots/SOM/power.png",width=7,height=2.5)
 
 ### sampling bias vs environ change bias ########################
 
-#sampling bias with respect to change can be caused by either
-#-constant spatial bias with heterogeneous land use change
-#-changing spatial bias with uniform or heterogeneous land use change
-
-#unbiased sampling of environmental change
-#-uniform land use change and unbiased sampling
-#-uniform land use change and constant biased sampling
-
-#pull out how much each sampling approach samples the true urban change
-
-#each sim - pull out bias of data and bias of estimate
 sampleRun <- function(change="clustered_change"){
   
 df <- generateData()
@@ -274,26 +197,9 @@ sampleBiasCC$scenario <- factor(sampleBiasCC$scenario, levels=c("Random","Bias",
 sampleBiasUC$scenario <- factor(sampleBiasUC$scenario, levels=c("Random","Bias","Bias+"))
 
 #plot
-g1 <- ggplot(sampleBiasUC)+
-  geom_density(aes(urban_diff,fill=scenario),alpha=0.2)+
-  theme_few()+
-  labs(subtitle = "Uniform urban change")+
-  scale_fill_discrete("Scenario")+
-  xlab("Sampled urban change") + ylab("Density")+
-  theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
-        legend.position=c(0.845,0.85),legend.key.size=unit(0.35,"line"),
-        legend.title = (element_text(size=8)),legend.text = (element_text(size=8)))
 
-
-g2 <- ggplot(sampleBiasCC)+
-  geom_density(aes(urban_diff,fill=scenario),alpha=0.2)+
-  theme_few()+
-  labs(subtitle = "Clustered urban change")+
-  scale_fill_discrete("Scenario")+
-  xlab("Sampled urban change") + ylab("Density")+
-  theme(plot.subtitle = element_text(vjust=2,hjust=0.02),
-        legend.position=c(0.845,0.85),legend.key.size=unit(0.35,"line"),
-        legend.title = (element_text(size=8)),legend.text = (element_text(size=8)))
+g1 <- plotUrbanDistr(sampleBiasUC, mytitle="Uniform urban change")
+g1 <- plotUrbanDistr(sampleBiasCC, mytitle="Clustered urban change")
 
 cowplot::plot_grid(g1,g2,nrow=1)
 
@@ -339,38 +245,18 @@ sampleBiasCC <- ldply(1:1000,function(x)sampleUrbanChange(x,change="clustered_ch
 sampleBiasUC <- ldply(1:1000,function(x)sampleUrbanChange(x,change="uniform_change"))
 sampleBiasNC <- ldply(1:1000,function(x)sampleUrbanChange(x,change="no_change"))
 
-g1 <- ggplot(sampleBiasNC)+
-  geom_violin(aes(x=scenario,y=urban_median,fill=factor(time)),alpha=0.2,
-              draw_quantiles = c(0.25,0.5,0.75))+
-  theme_few()+
-  theme(legend.position = "none") +
-  scale_fill_manual("Time point", values = c("lightblue","blue"))+
-  labs(subtitle = "No urban change")+
-  xlab("Sampling scenario") + ylab ("Sampled urban cover")
+
+g1 <- plotUrbanMean(sampleBiasNC, mytitle = "No urban change")+ylim(-0.4,1.1)
 #random and bias both sample similar mean urban cover at each time step
 #bias + samples higher urban cover at the second time step
 
-g2 <- ggplot(sampleBiasUC)+
-  geom_violin(aes(x=scenario,y=urban_median,fill=factor(time)),alpha=0.2,
-              draw_quantiles = c(0.25,0.5,0.75))+
-  theme_few()+
-  theme(legend.position = "none") +
-  scale_fill_manual("Time point", values = c("lightblue","blue"))+
-  labs(subtitle = "Uniform urban change")+
-  xlab("Sampling scenario") + ylab ("Sampled urban cover")
+g2 <- plotUrbanMean(sampleBiasUC, mytitle = "Urban urban change")+ylim(-0.4,1.1)
 #all sample more urban cover in the second time step
 #but the increase is smaller with constant bias
 #maybe less space to sample more urban change
 #check results are the same if we do not bound urban cover - yes they are
 
-g3 <- ggplot(sampleBiasCC)+
-  geom_violin(aes(x=scenario,y=urban_median,fill=factor(time)),alpha=0.2,
-              draw_quantiles = c(0.25,0.5,0.75))+
-  theme_few()+
-  theme(legend.position = "none") +
-  scale_fill_manual("Time point", values = c("lightblue","blue"))+
-  labs(subtitle = "Clustered urban change")+
-  xlab("Sampling scenario") + ylab ("Sampled urban cover")
+g3 <- plotUrbanMean(sampleBiasCC, mytitle = "Clustered urban change")+ylim(-0.4,1.1)
 #bias and bias+ both sample much higher urban cover in the second time step
 
 plot_grid(g1,g2,g3,nrow=1)
