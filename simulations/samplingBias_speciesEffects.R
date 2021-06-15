@@ -273,4 +273,52 @@ plot_grid(plot1,plot2,plot3, ncol=3)
 
 ggsave("plots/Bias_plot_speciesEffects.png",width=11,height=3)
 
+
+### mean occupancy effects ###############################
+
+betaRange <- rep(seq(-3,3,by=0.1),1000)
+
+outputNC <- ldply(betaRange,function(i){
+  
+  df <- generateData(beta0=i)
+  next_df <- extendData(df,beta0=i,change="no_change")
+  #get proportion of sites observed to be occupied
+  temp <- getObsProp(next_df)
+  temp$beta <- i
+  return(temp)
+})
+
+outputUC <- ldply(betaRange,function(i){
+  
+  df <- generateData(beta0=i)
+  next_df <- extendData(df,beta0=i,change="uniform_change")
+  #get proportion of sites observed to be occupied
+  temp <- getObsProp(next_df)
+  temp$beta <- i
+  return(temp)
+})
+
+outputCC <- ldply(betaRange,function(i){
+  
+  df <- generateData(beta0=i)
+  next_df <- extendData(df,beta0=i,change="clustered_change")
+  #get proportion of sites observed to be occupied
+  temp <- getObsProp(next_df)
+  temp$beta <- i
+  return(temp)
+})
+
+
+#Plotting occupancy change 
+#logit difference
+plot1 <- plotBias(outputNC, myxlab="Mean occupancy (logit-scale)", 
+                  mytitle="No urban change") + ylim(-1,0.25)
+plot2 <- plotBias(outputUC, myxlab="Mean occupancy (logit-scale)",
+                  mytitle="Uniform urban change")+ ylim(-1,0.25)
+plot3 <- plotBias(outputCC, myxlab="Mean occupancy (logit-scale)",
+                  mytitle = "Clustered urban change")+ ylim(-1,0.25)
+plot_grid(plot1,plot2,plot3, ncol=3)
+
+ggsave("plots/SOM/Bias_plot_meanOccuEffects.png",width=10,height=3)
+
 ### end ##################################################
