@@ -222,7 +222,6 @@ ggsave("plots/Obs_change_speciesPref.png",width=9,height=5)
 
 betaRange <- rep(seq(-3,3,by=0.1),1000)
 
-
 outputNC <- ldply(betaRange,function(i){
   
   df <- generateData(beta1=i)
@@ -254,21 +253,19 @@ outputCC <- ldply(betaRange,function(i){
 })
 
 
-# Plotting time points 2
-plot1 <- plotBiasT2(outputNC, mytitle="No urban change")+ylim(-0.8,0.36)
-plot2 <- plotBiasT2(outputUC, mytitle="Uniform urban change")+ylim(-0.8,0.36)
-plot3 <- plotBiasT2(outputCC, mytitle = "Clustered urban change")+ylim(-0.8,0.36)
+# Plotting time points 
+plot1 <- plotMeans(outputNC, mytitle="No urban change")
+plot2 <- plotMeans(outputUC, mytitle="Uniform urban change")
+plot3 <- plotMeans(outputCC, mytitle = "Clustered urban change")
 
 plot_grid(plot1,plot2,plot3, ncol=3)
-
-ggsave("plots/Bias_plot_speciesEffects_T2.png",width=11,height=3)
 
 
 #Plotting occupancy change 
 #logit difference
-plot1 <- plotBias(outputNC, mytitle="No urban change") + ylim(-1.3,1.3)
-plot2 <- plotBias(outputUC, mytitle="Uniform urban change")+ ylim(-1.3,1.3)
-plot3 <- plotBias(outputCC, mytitle = "Clustered urban change")+ ylim(-1.3,1.3)
+plot1 <- plotBias(outputNC, mytitle="No urban change") + ylim(-1.35,1.35)
+plot2 <- plotBias(outputUC, mytitle="Uniform urban change")+ ylim(-1.35,1.35)
+plot3 <- plotBias(outputCC, mytitle = "Clustered urban change")+ ylim(-1.35,1.35)
 plot_grid(plot1,plot2,plot3, ncol=3)
 
 ggsave("plots/Bias_plot_speciesEffects.png",width=11,height=3)
@@ -308,17 +305,70 @@ outputCC <- ldply(betaRange,function(i){
   return(temp)
 })
 
+# Plotting time points 
+plot1 <- plotMeans(outputNC, mytitle="No urban change")
+plot2 <- plotMeans(outputUC, mytitle="Uniform urban change")
+plot3 <- plotMeans(outputCC, mytitle = "Clustered urban change")
+
+plot_grid(plot1,plot2,plot3, ncol=3)
+
 
 #Plotting occupancy change 
 #logit difference
 plot1 <- plotBias(outputNC, myxlab="Mean occupancy (logit-scale)", 
-                  mytitle="No urban change") + ylim(-1,0.25)
+                  mytitle="No urban change") + ylim(-1.6,0.1)
 plot2 <- plotBias(outputUC, myxlab="Mean occupancy (logit-scale)",
-                  mytitle="Uniform urban change")+ ylim(-1,0.25)
+                  mytitle="Uniform urban change")+ ylim(-1.6,0.1)
 plot3 <- plotBias(outputCC, myxlab="Mean occupancy (logit-scale)",
-                  mytitle = "Clustered urban change")+ ylim(-1,0.25)
+                  mytitle = "Clustered urban change")+ ylim(-1.6,0.1)
 plot_grid(plot1,plot2,plot3, ncol=3)
 
 ggsave("plots/SOM/Bias_plot_meanOccuEffects.png",width=10,height=3)
+
+
+### urban exploiters ###########################################
+
+outputNC <- ldply(1:1000,function(i){
+  
+  df <- generateData(beta1 = 2)
+  next_df <- extendData(df,change="no_change",beta1 = 2)
+  #get proportion of sites observed to be occupied
+  getObsProp(next_df)
+  
+})
+q1 <- plotObsProp(outputNC,mytitle="No urban change")+ylim(0,0.7)
+g1 <- plotObsChange(outputNC)+ylim(-2.3,1)
+
+outputUC <- ldply(1:1000,function(i){
+  
+  df <- generateData(beta1 = 2)
+  next_df <- extendData(df,change="uniform_change",beta1 = 2)
+  #get proportion of sites observed to be occupied
+  getObsProp(next_df)
+  
+})
+q2 <- plotObsProp(outputUC,mytitle="Uniform urban change")+ylim(0,0.7)
+g2 <- plotObsChange(outputUC)+ylim(-2.3,1)
+
+outputCC <- ldply(1:1000,function(i){
+  
+  df <- generateData(beta1 = 2)
+  next_df <- extendData(df,change="clustered_change",beta1 = 2)
+  #get proportion of sites observed to be occupied
+  getObsProp(next_df)
+  
+})
+q3 <- plotObsProp(outputCC,mytitle="Clustered urban change")
+g3 <- plotObsChange(outputCC)
+
+
+plot1 <- plot_grid(q1,q2,q3,nrow=1)
+plot2 <- plot_grid(g1,g2,g3,nrow=1)
+
+plot_grid(plot1,plot2,ncol=1,align='v',
+          labels=c("A","B"),
+          vjust=1)
+
+ggsave("plots/Obs_change_urbanExploiter.png",width=10.5,height=6)
 
 ### end ##################################################

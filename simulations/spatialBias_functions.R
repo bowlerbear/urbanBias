@@ -1,6 +1,6 @@
 generateData <- function(M=500,nuSamples=100, 
-                         beta0 = 0, beta1=-2,
-                         urban0 = 0, urbanBias=2){
+                         beta0 = 0, beta1 = -2,
+                         urban0 = 0, urbanBias = 2){
   
   # M is the number of sites
   
@@ -57,17 +57,18 @@ generateData <- function(M=500,nuSamples=100,
 
 
 extendData <- function(df, 
-                       beta0 = 0, beta1=-2, 
-                       urban0 = 0, urbanBias=2,change="no_change"){
+                       beta0 = 0, beta1 = -2, 
+                       urban0 = 0, urbanBias = 2,
+                       change="no_change"){
   
   M = length(unique(df$Site))
   nuSamples = sum(df$Visits2==1)
   
   #extract data for next time step
   if("p" %in% names(df)){
-    next_df <- unique(df[,c("Site","urbanCover","psi","z","y","p")])
+    next_df <- df[,c("Site","urbanCover","psi","z","y","p")]
   }else{
-    next_df <- unique(df[,c("Site","urbanCover","psi","z")])
+    next_df <- df[,c("Site","urbanCover","psi","z")]
   }
   
   #is there a change in urban cover
@@ -102,7 +103,6 @@ extendData <- function(df,
   }
   
   #generate new observations
-  beta0 = 0
   next_df$psi <- plogis(beta0 + beta1 * next_df$urbanCover) 
   next_df$z <- rbinom(M, 1, next_df$psi)
   
@@ -135,7 +135,7 @@ extendData <- function(df,
   next_df$Visits4 <- ifelse(next_df$Site %in% Visits,1,0)
   
   next_df$urbanCover <- next_df$urbanCover + medianUrbanChange
-  next_df$Time <- df$Time + 1
+  next_df$Time <- 2
   df <- rbind(df,next_df)
   
 }
@@ -710,8 +710,11 @@ plotObsProp <- function(outputNC,mytitle){
     scale_x_discrete("Sampling scenario", labels = c("Visit1" = "Full","Visit2" = "Random",
                                        "Visit3" = "Bias","Visit4" = "Bias+"))+
     ylab("Occupancy proportion")+
-    theme(legend.position = c(0.85,0.85),legend.key.size=unit(0.5,"line"),
-          legend.title = (element_text(size=10)))+
+    theme(legend.position = c(0.21,0.23),legend.key.size=unit(0.5,"line"),
+          legend.title = (element_text(size=10)),
+          axis.title = element_text(size=15),
+          axis.text = element_text(size=12),
+          plot.subtitle=element_text(size=18))+
     labs(subtitle = mytitle)
     
 }
@@ -785,6 +788,8 @@ plotObsChange <- function(outputNC){
     scale_x_discrete("Sampling scenario", labels = c("Visit1" = "Full","Visit2" = "Random",
                                                      "Visit3" = "Bias","Visit4" = "Bias+"))+
     ylab("Occupancy change")+
+    theme(axis.title = element_text(size=15),
+          axis.text = element_text(size=12))+
     geom_hline(yintercept=0,linetype="dashed")
   
 }
@@ -794,14 +799,44 @@ plotObsChange <- function(outputNC){
 
 #function to get differences of Visit3 and Visit 4 from Visit1 at each time step
 getDifferences <- function(outputNC){
-  outputNC$Visit_4diff_Time1 <- log(outputNC$Visit4_Time1_prop/outputNC$Visit1_Time1_prop)
-  outputNC$Visit_3diff_Time1 <- log(outputNC$Visit3_Time1_prop/outputNC$Visit1_Time1_prop)
-  outputNC$Visit_4diff_Time2 <- log(outputNC$Visit4_Time2_prop/outputNC$Visit1_Time2_prop)
-  outputNC$Visit_3diff_Time2 <- log(outputNC$Visit3_Time2_prop/outputNC$Visit1_Time2_prop)
+  require(boot)
+  outputNC$Visit_4diff_Time1 <- logit(outputNC$Visit4_Time1_prop)-logit(outputNC$Visit1_Time1_prop)
+  outputNC$Visit_3diff_Time1 <- logit(outputNC$Visit3_Time1_prop)-logit(outputNC$Visit1_Time1_prop)
+  outputNC$Visit_4diff_Time2 <- logit(outputNC$Visit4_Time2_prop)-logit(outputNC$Visit1_Time2_prop)
+  outputNC$Visit_3diff_Time2 <- logit(outputNC$Visit3_Time2_prop)-logit(outputNC$Visit1_Time2_prop)
   return(outputNC)
 }
 
-plotBiasT2 <- function(outputNC,mytitle){
+plotMeans <- function(outputNC,mytitle){
+  
+  outputNC_melt <- reshape::melt(outputNC,id="beta")
+  outputNC_melt$Time <- as.factor(sapply(as.character(outputNC_melt$variable),
+                                         function(x)strsplit(x,"_")[[1]][2]))
+  levels(outputNC_melt$Time) <- c("1","2")
+  
+  outputNC_melt$Sampling <- as.factor(sapply(as.character(outputNC_melt$variable),
+                                             function(x)strsplit(x,"_")[[1]][1]))
+  levels(outputNC_melt$Sampling) <- c("Full","Random","Bias","Bias+")
+  
+  outputNC_melt_median <- plyr::ddply(outputNC_melt,.(beta,Time,Sampling),
+                                      summarise,
+                                      value=median(value))
+  
+  ggplot(outputNC_melt_median) +
+    geom_smooth(aes(x=beta,y=value,colour=Sampling, linetype=Time),
+                se = FALSE,position=position_dodge(width=0.2))+
+    theme_few()+
+    scale_color_brewer(type="qual")+
+    geom_hline(yintercept = 0) + geom_vline(xintercept = 0)+
+    xlab("Species association with urban cover")+
+    ylab("Occupancy estimate")+
+    theme(legend.position = c(0.8,0.25),legend.key.size=unit(0.7,"line"),
+          legend.title = (element_text(size=12)))+
+    labs(subtitle = mytitle)
+  
+}
+
+plotBiasT <- function(outputNC,mytitle){
   
   outputNC <- getDifferences(outputNC)[,9:13]
   
@@ -818,8 +853,8 @@ plotBiasT2 <- function(outputNC,mytitle){
                                       summarise,
                                       value=median(value))
   
-  ggplot(subset(outputNC_melt_median,Time==2)) +
-    geom_smooth(aes(x=beta,y=value,colour=Sampling),
+  ggplot(outputNC_melt_median) +
+    geom_smooth(aes(x=beta,y=value,colour=Sampling, linetype=Time),
                 se = FALSE,position=position_dodge(width=0.2))+
     theme_few()+
     scale_color_brewer(type="qual")+
@@ -874,7 +909,10 @@ plotBias <- function(outputNC,myxlab = "Species association with urban cover",
     xlab(myxlab)+
     ylab("Bias of occupancy change estimate")+
     theme(legend.position = c(0.8,0.25),legend.key.size=unit(0.7,"line"),
-          legend.title = (element_text(size=12)))+
+          legend.title = (element_text(size=10)),
+          axis.title = element_text(size=13),
+          axis.text = element_text(size=12),
+          plot.subtitle=element_text(size=18))+
     labs(subtitle = mytitle)
   
 }
@@ -928,7 +966,10 @@ plotUrbanMean <- function(sampleBiasNC, mytitle = "No urban change"){
     scale_fill_manual("Time point", values = c("lightblue","blue"))+
     labs(subtitle = mytitle)+
     xlab("Sampling scenario") + ylab ("Sampled urban cover")+
-    theme(legend.position = c(0.23,0.83),legend.key.size=unit(0.7,"line"),
-          legend.title = (element_text(size=12)))
+    theme(legend.position = c(0.23,0.83),legend.key.size=unit(0.5,"line"),
+          legend.title = (element_text(size=10)),
+          axis.title = element_text(size=13),
+          axis.text = element_text(size=12),
+          plot.subtitle=element_text(size=15))
   
 }

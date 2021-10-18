@@ -232,9 +232,9 @@ sampleUrbanChange <- function(x,change="clustered_change"){
                         "Bias","Bias",
                         "Bias+","Bias+"),
              time = c(1,2,1,2,1,2),
-             urban_median=c(median(urbanCover2_T1),median(urbanCover2_T2),
-                            median(urbanCover3_T1),median(urbanCover3_T2),
-                            median(urbanCover4_T1),median(urbanCover4_T2)))
+             urban_median=c(mean(urbanCover2_T1),mean(urbanCover2_T2),
+                            mean(urbanCover3_T1),mean(urbanCover3_T2),
+                            mean(urbanCover4_T1),mean(urbanCover4_T2)))
   
   temp$scenario <- factor(temp$scenario,levels=c("Random","Bias","Bias+"))
   return(temp)
@@ -250,7 +250,7 @@ g1 <- plotUrbanMean(sampleBiasNC, mytitle = "No urban change")+ylim(-0.4,1.1)
 #random and bias both sample similar mean urban cover at each time step
 #bias + samples higher urban cover at the second time step
 
-g2 <- plotUrbanMean(sampleBiasUC, mytitle = "Urban urban change")+ylim(-0.4,1.1)
+g2 <- plotUrbanMean(sampleBiasUC, mytitle = "Uniform urban change")+ylim(-0.4,1.1)
 #all sample more urban cover in the second time step
 #but the increase is smaller with constant bias
 #maybe less space to sample more urban change

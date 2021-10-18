@@ -14,6 +14,7 @@ load("C:/Users/db40fysa/Nextcloud/sMon/sMon-Analyses/Odonata_Git/sMon-insects/mt
 #### amphibians ######
 samplingIntensity <- readRDS("C:/Users/db40fysa/Nextcloud/sMon/sMon-Analyses/Amphibians/amphiAnalysis/HPC_inputs/samplingIntensity.rds")
 st_geometry(samplingIntensity) <- NULL
+nrow(samplingIntensity)#17523
 
 #put numbers in 2 -year periods
 samplingIntensity$MTB_Q <- gsub("_","",samplingIntensity$MTB_Q)
@@ -37,7 +38,9 @@ amphisL <-
               se=FALSE)+
   theme_few()+
   ylim(0,1)+
-  theme(legend.position = c(0.15,0.75))+
+  theme(legend.position = c(0.15,0.75), 
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size=12))+
   theme(legend.key.height = unit(0.275, 'cm'),
         legend.key.width = unit(0.15, 'cm'))+
   scale_color_viridis_c("Year")+
@@ -47,6 +50,9 @@ amphisL <-
 #right
 
 #one model
+model1 <- glm(Visited ~ urban, family= binomial, data = samplingIntensity)
+summary(model1)
+
 model1 <- glm(Visited ~ I(Year-1991) * urban, family= binomial, data = samplingIntensity)
 summary(model1)
 
@@ -86,9 +92,13 @@ modelCoefs <- ldply(myYears,function(y){
 
 amphisR <- ggplot(modelCoefs)+
   geom_crossbar(aes(x = Year, y = estimate, 
-                    ymax = upper, ymin = lower))+
+                    ymax = upper, ymin = lower, fill=Year))+
   geom_hline(yintercept = 0, colour="red", linetype="dashed")+
   theme_few()+ylab("Effect of urban cover")+
+  scale_fill_viridis_c("Year")+
+  theme(legend.position = "none",
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size=12))+
   scale_x_continuous(labels=c(1992,2002,2012),breaks=c(1992,2002,2012))
 
 
@@ -117,7 +127,9 @@ buttL <- ggplot(samplingIntensity_Group,
               se=FALSE)+
   theme_few()+
   ylim(0,1)+
-  theme(legend.position="none")+
+  theme(legend.position="none",
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size=12))+
   scale_color_viridis_c("Year")+
   xlab("Urban cover (%)")+ylab("Visit probability")
 
@@ -125,7 +137,10 @@ buttL <- ggplot(samplingIntensity_Group,
 myYears <- sort(unique(samplingIntensity$Year))
 
 #one model
-model1 <- glm(Visited ~ Year * urban, family= binomial, data = samplingIntensity)
+model1 <- glm(Visited ~ urban, family= binomial, data = samplingIntensity)
+summary(model1)
+
+model1 <- glm(Visited ~ I(Year-1991) * urban, family= binomial, data = samplingIntensity)
 summary(model1)
 
 model1 <- gam(Visited ~ urban + s(x,y), family= binomial, data = samplingIntensity)
@@ -161,14 +176,18 @@ modelCoefs <- ldply(myYears,function(y){
 
 buttR <- ggplot(modelCoefs)+
   geom_crossbar(aes(x = Year, y = estimate, 
-                    ymax = upper, ymin = lower))+
+                    ymax = upper, ymin = lower, fill=Year))+
   geom_hline(yintercept = 0, colour="red", linetype="dashed")+
   theme_few()+ylab("Effect of urban cover")+
+  scale_fill_viridis_c("Year")+
+  theme(legend.position = "none",
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size=12))+
   scale_x_continuous(labels=c(1992,2002,2012),breaks=c(1992,2002,2012))
 
 #### birds ####
 
-samplingIntensity <- readRDS("C:/Users/db40fysa/Nextcloud/sMon/sMon-Analyses/GBIF_data/Naturgucker/surveys_birds.rds")
+samplingIntensity <- readRDS("C:/Users/db40fysa/Nextcloud/sMon/sMon-Analyses/GBIF_data/Naturgucker/surveys_birds2.rds")
 
 #put numbers in 2 -year periods
 samplingIntensity$x <- mtbqsDF$x[match(samplingIntensity$MTB_Q,mtbqsDF$MTB_Q)]
@@ -190,13 +209,17 @@ birdsL <- ggplot(samplingIntensity_Group,
               se=FALSE)+
   theme_few()+
   ylim(0,1)+
-  theme(legend.position = "none")+
+  theme(legend.position = "none",
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size=12))+
   scale_color_viridis_c("Year")+
   xlab("Urban cover (%)")+ylab("Visit probability")
 
 #right
+model1 <- glm(Visited ~ urban, family= binomial, data = samplingIntensity)
+summary(model1)#positive
 
-model1 <- glm(Visited ~ Year * urban, family= binomial, data = samplingIntensity)
+model1 <- glm(Visited ~ I(Year-1991) * urban, family= binomial, data = samplingIntensity)
 summary(model1)#positive
 
 model1 <- gam(Visited ~ urban +s(x,y), family= binomial, data = samplingIntensity)
@@ -246,9 +269,13 @@ modelCoefs <- ldply(myYears,function(y){
 
 birdsR <- ggplot(modelCoefs)+
   geom_crossbar(aes(x = Year, y = estimate, 
-                    ymax = upper, ymin = lower))+
+                    ymax = upper, ymin = lower, fill=Year))+
   geom_hline(yintercept = 0, colour="red", linetype="dashed")+
   theme_few()+ylab("Effect of urban cover")+
+  scale_fill_viridis_c("Year")+
+  theme(legend.position = "none",
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size=12))+
   scale_x_continuous(labels=c(1992,2002,2012),breaks=c(1992,2002,2012))
     
 #### combine ####
@@ -291,7 +318,9 @@ amphisL <-
               se=FALSE)+
   theme_few()+
   ylim(0,1)+
-  theme(legend.position = c(0.1,0.75))+
+  theme(legend.position = c(0.1,0.75),
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size=12))+
   theme(legend.key.height = unit(0.275, 'cm'),
         legend.key.width = unit(0.15, 'cm'))+
   scale_color_viridis_c("Year")+
@@ -300,13 +329,16 @@ amphisL <-
 
 #right
 #one model
-model1 <- glm(Visited ~ Year * PA_area, family= binomial, data = samplingIntensity)
+model1 <- glm(Visited ~ PA_area, family= binomial, data = samplingIntensity)
+summary(model1)#sig neg
+
+model1 <- glm(Visited ~ I(Year-1991) * PA_area, family= binomial, data = samplingIntensity)
 summary(model1)#sig neg
 
 model1 <- glm(Visited ~PA_area, family= binomial, data = samplingIntensity)
 summary(model1)#sig neg
 
-model1 <- gam(Visited ~ I(Year-1992) * PA_area +s(x,y), family= binomial, data = samplingIntensity)
+model1 <- gam(Visited ~ I(Year-1991) * PA_area +s(x,y), family= binomial, data = samplingIntensity)
 summary(model1)#sig neg
 
 #separate models
@@ -336,9 +368,13 @@ modelCoefs <- ldply(myYears,function(y){
 
 amphisR <- ggplot(modelCoefs)+
   geom_crossbar(aes(x = Year, y = estimate, 
-                    ymax = upper, ymin = lower))+
+                    ymax = upper, ymin = lower, fill=Year))+
   geom_hline(yintercept = 0, colour="red", linetype="dashed")+
   theme_few()+ylab("Effect of protected area")+
+  scale_fill_viridis_c("Year")+
+  theme(legend.position = "none",
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size=12))+
   scale_x_continuous(labels=c(1992,2002,2012),breaks=c(1992,2002,2012))
 
 amphis <- plot_grid(amphisL,amphisR,nrow=1)
@@ -361,15 +397,19 @@ buttL <- ggplot(samplingIntensity_Group,
               se=FALSE)+
   theme_few()+
   ylim(0,1)+
-  theme(legend.position="none")+
+  theme(legend.position="none",
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size=12))+
   scale_color_viridis_c("Year")+
   xlab("Protected area cover (%)")+ylab("Visit probability")
 
 
 #one model
-model1 <- glm(Visited ~ Year * PA_area, family= binomial, data = samplingIntensity)
+model1 <- glm(Visited ~ PA_area, family= binomial, data = samplingIntensity)
 summary(model1)#no effect
 
+model1 <- glm(Visited ~ I(Year-1991) * PA_area, family= binomial, data = samplingIntensity)
+summary(model1)#no effect
 
 model1 <- glm(Visited ~ PA_area, family= binomial, data = samplingIntensity)
 summary(model1)
@@ -404,9 +444,13 @@ modelCoefs <- ldply(myYears,function(y){
 
 buttR <- ggplot(modelCoefs)+
   geom_crossbar(aes(x = Year, y = estimate, 
-                    ymax = upper, ymin = lower))+
+                    ymax = upper, ymin = lower, fill=Year))+
   geom_hline(yintercept = 0, colour="red", linetype="dashed")+
   theme_few()+ylab("Effect of protected area")+
+  scale_fill_viridis_c("Year")+
+  theme(legend.position = "none",
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size=12))+
   scale_x_continuous(labels=c(1992,2002,2012),breaks=c(1992,2002,2012))
 
 butt <- plot_grid(buttL,buttR,nrow=1)
@@ -429,14 +473,19 @@ birdsL <- ggplot(samplingIntensity_Group,
               se=FALSE)+
   theme_few()+
   ylim(0,1)+
-  theme(legend.position = "none")+
+  theme(legend.position = "none",
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size=12))+
   scale_color_viridis_c("Year")+
   xlab("Protected area cover (%)")+ylab("Visit probability")
 
 #right
 
 #one model
-model1 <- glm(Visited ~ Year * PA_area, family= binomial, data = samplingIntensity)
+model1 <- glm(Visited ~ PA_area, family= binomial, data = samplingIntensity)
+summary(model1)#negative
+
+model1 <- glm(Visited ~ I(Year-1991) * PA_area, family= binomial, data = samplingIntensity)
 summary(model1)#negative
 
 model1 <- glm(Visited ~ PA_area, family= binomial, data = samplingIntensity)
@@ -486,9 +535,13 @@ modelCoefs <- ldply(myYears,function(y){
 
 birdsR <- ggplot(modelCoefs)+
   geom_crossbar(aes(x = Year, y = estimate, 
-                    ymax = upper, ymin = lower))+
+                    ymax = upper, ymin = lower, fill=Year))+
   geom_hline(yintercept = 0, colour="red", linetype="dashed")+
   theme_few()+ylab("Effect of protected area")+
+  scale_fill_viridis_c("Year")+
+  theme(legend.position = "none",
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size=12))+
   scale_x_continuous(labels=c(1992,2002,2012),breaks=c(1992,2002,2012))
 
 birds <- plot_grid(birdsL,birdsR,nrow=1)
@@ -506,7 +559,6 @@ plot_grid(amphis,butt,birds,
           vjust = c(0.95,0.95,0.95), hjust = c(-0.5,-0.5,-0.75))
 
 ggsave("plots/realworldBias_protectedarea.png",width=9.3,height=9)
-
 
 ### LAND USE CHANGE #####
 
