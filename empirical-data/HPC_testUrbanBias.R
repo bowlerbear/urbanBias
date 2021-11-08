@@ -95,7 +95,7 @@ mydataset <- as.character(TaskID$Var2[which(TaskID$TaskID==task.id)])
 #run bias model
 out2 <- getAnnualBiasSpace(myfolder = mydataset,
                            mytaxa = mytaxa)
-saveRDS(out2,file="annualBiasSpace_",mydataset,"_",mytaxa,".rds")
+saveRDS(out2,file=paste0("annualBiasSpace_",mydataset,"_",mytaxa,".rds"))
 
 
 
