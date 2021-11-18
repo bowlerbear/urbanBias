@@ -388,6 +388,51 @@ readMTBQs <- function(myfolder,mytaxa){
 }
   
 
+plotAllTS <- function(myfolder, mytaxa){
+  
+  annualDF <- getAnnualBias(myfolder, mytaxa)
+  names(annualDF)[1] <- "year" 
+  
+  #get annual urban cover
+  samplingIntensity <- readRDS(paste0(myfolder,"/surveys_revision_",myfolder,"_",mytaxa,".rds"))
+  annualUrbanCover <- samplingIntensity %>% 
+    as_tibble() %>%
+    dplyr::group_by(Year) %>%
+    dplyr::summarise(totalUrban = sum(urban)) %>%
+    dplyr::rename(year = Year)
+  
+  
+  #get newly visited sites
+  
+  newSites <- readMTBQs(myfolder, mytaxa)
+  
+  # get new recorders 
+  
+  newRecorders <- readRecorders(myfolder, mytaxa)
+  
+  # merge all 
+  
+  all <- inner_join(newSites,newRecorders)
+  all <- inner_join(all,annualDF)
+  all <- inner_join(all,annualUrbanCover)
+  
+  p1 <- qplot(year,firstyearMTBQs/totalMTBQs,data=all)+
+    ylab("prop new sites") + xlab("year") + theme_few()
+  p2 <- qplot(year,firstyearObs/totalObs,data=all)+
+    ylab("prop new recorders") + xlab("year") + theme_few()
+  p3 <- qplot(year,totalMTBQs,data=all)+
+    ylab("total sites") + xlab("year") + theme_few()
+  p4 <- qplot(year,totalObs,data=all)+
+    ylab("total recorders") + xlab("year") + theme_few()
+  p5 <- qplot(year,totalUrban,data=all)+
+    ylab("annual urban cover") + xlab("year") + theme_few()
+  p6 <- qplot(year,estimate,data=all)+
+    ylab("estimate") + xlab("year") + theme_few()
+  
+  cowplot::plot_grid(p1,p2,p3,p4,p5,p6,nrow=2)
+  
+}
+
 plotAllNew <- function(myfolder, mytaxa){
   
   annualDF <- getAnnualBias(myfolder, mytaxa)
@@ -559,6 +604,8 @@ getAnnualDifferences <- function(myfolder, mytaxa){
   #and the difference
   newRecorders$firstObsDiff <- as.numeric(resid(lm(firstyearObs/totalObs~year,
                                                    data=newRecorders,na.action=na.exclude)))
+  newRecorders$totalObsDiff <- as.numeric(resid(lm(totalObs~year,
+                                                 data=newRecorders,na.action=na.exclude)))
   newRecorders$firstObsChange <- c(NA,diff(newRecorders$firstyearObs/newRecorders$totalObs))
   newRecorders$totalsObsChange <- c(NA,diff(log(newRecorders$totalObs+1)))
   newRecorders <- data.frame(year=1992:2018) %>%
@@ -580,6 +627,7 @@ getAnnualDifferences <- function(myfolder, mytaxa){
                    newMTBQsDiff = newSites$firstMTBQsDiff,
                    totalObs = newRecorders$totalObs,
                    totalObsChange = newRecorders$totalsObsChange,
+                   totalObsDiff = newRecorders$totalObsDiff,
                    newObs = newRecorders$firstyearObs,
                    newObsChange = newRecorders$firstObsChange,
                    newObsDiff = newRecorders$firstObsDiff)
@@ -600,16 +648,24 @@ plotAnnualDifferences <- function(getAnnualDifferences_DF, type="diff"){
   
 }
 
-testAnnualDifferences <- function(getAnnualDifferences_DF){
+testAnnualDifferences <- function(getAnnualDifferences_DF,type="change"){
   
   all <- getAnnualDifferences_DF[complete.cases(getAnnualDifferences_DF),]
   all <- all %>% filter(Year > 1999)
   
-  p1 <- cor(all$newMTBQsChange,all$annualBiasChange)
-  p2 <- cor(all$newObsChange, all$annualBiasChange)
-  p3 <- cor(all$totalMTBQsChange,all$annualBiasChange)
-  p4 <- cor(all$totalObsChange,all$annualBiasChange)
-  p5 <- cor(all$urbanCoverChange,all$annualBiasChange)
+  if(type=="change"){
+    p1 <- cor(all$newMTBQsChange,all$annualBiasChange)
+    p2 <- cor(all$newObsChange, all$annualBiasChange)
+    p3 <- cor(all$totalMTBQsChange,all$annualBiasChange)
+    p4 <- cor(all$totalObsChange,all$annualBiasChange)
+    p5 <- cor(all$urbanCoverChange,all$annualBiasChange)
+  }else if (type=="diff"){
+    p1 <- cor(all$newMTBQsDiff,all$annualBiasDiff)
+    p2 <- cor(all$newObsDiff, all$annualBiasDiff)
+    p3 <- cor(all$totalMTBQsDiff,all$annualBiasDiff)
+    p4 <- cor(all$totalObsDiff,all$annualBiasDiff)
+    p5 <- cor(all$urbanCoverDiff,all$annualBiasDiff)
+  }
   
   df <- data.frame(type=c("prop new sites", 
                           "prop new recorders", 
