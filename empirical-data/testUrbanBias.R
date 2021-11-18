@@ -5,6 +5,10 @@ library(broom)
 library(cowplot)
 library(mgcv)
 
+### functions #####
+
+source("empirical-data/main_functions.R")
+
 ### environ datasets ####
 
 #localPC
@@ -19,10 +23,6 @@ load("C:/Users/db40fysa/Nextcloud/sMon/sMon-Analyses/Odonata_Git/sMon-insects/mt
 setwd("C:/Users/db40fysa/Nextcloud/sMon/sMon-Analyses/GBIF_other_data/urbanBias_datasets")
 
 #setwd("/data/dbowler/urbanBias")
-
-### functions #####
-
-source("empirical-data/main_functions.R")
 
 ### plot time series ####
 
@@ -202,7 +202,103 @@ write.csv(allDF,file="urban_tests.csv",row.names=FALSE)
 
 ### understanding the bias ####
 
-#differences between years
+#how else to test the bias
+
+#increased bias through time - focus on 2005 onwards
+
+# compare in 5-year periods (over last 15 years)
+# urban cover of newly visited sites
+# urban cover of sites visited by new recorders
+# urban change in sites that are sampled in all time periods vs only old samples vs new #samples
+
+#### annual ####
+plotAllTS(myfolder = "GBIF", mytaxa = "amphibians")
+plotAllTS(myfolder = "GBIF", mytaxa = "plants")
+plotAllTS(myfolder = "GBIF", mytaxa = "birds")
+plotAllTS(myfolder = "GBIF", mytaxa = "butterflies")
+
+#naturgucker
+plotAllNew(myfolder = "NG", mytaxa = "amphibians")
+amphis <- testAllNew(myfolder = "NG", mytaxa = "amphibians")
+plotAllNew(myfolder = "NG", mytaxa = "plants")
+plants <- testAllNew(myfolder = "NG", mytaxa = "plants")
+plotAllNew(myfolder = "NG", mytaxa = "birds")
+birds <- testAllNew(myfolder = "NG", mytaxa = "birds")
+plotAllNew(myfolder = "NG", mytaxa = "butterflies")
+butts <- testAllNew(myfolder = "NG", mytaxa = "butterflies")
+allDF <- bind_rows(amphis, plants, birds, butts)
+allDF$type <- factor(allDF$type, levels = c("total recorders","prop new recorders",
+                                            "total sites", "prop new sites",
+                                            "urban cover"))
+
+NG <- ggplot(allDF)+
+  geom_col(aes(x=taxa,y=cor))+
+  facet_wrap(~type,nrow=1)+
+  coord_flip()+
+  xlab("taxa group") + ylab("correlation with annual bias") +
+  geom_hline(yintercept=0,linetype="dashed")+
+  theme_few()
+
+
+#GBIF
+plotAllNew(myfolder = "GBIF", mytaxa = "amphibians")
+amphis <- testAllNew(myfolder = "GBIF", mytaxa = "amphibians")
+plotAllNew(myfolder = "GBIF", mytaxa = "plants")
+plants <- testAllNew(myfolder = "GBIF", mytaxa = "plants")
+plotAllNew(myfolder = "GBIF", mytaxa = "birds")
+birds <- testAllNew(myfolder = "GBIF", mytaxa = "birds")
+plotAllNew(myfolder = "GBIF", mytaxa = "butterflies")
+butts <- testAllNew(myfolder = "GBIF", mytaxa = "butterflies")
+allDF <- bind_rows(amphis, plants, birds, butts)
+allDF$type <- factor(allDF$type, levels = c("total recorders","prop new recorders",
+                                            "total sites", "prop new sites",
+                                            "urban cover"))
+
+GBIF <- ggplot(allDF)+
+  geom_col(aes(x=taxa,y=cor))+
+  facet_wrap(~type,nrow=1)+
+  coord_flip()+
+  xlab("taxa group") + ylab("correlation with annual bias") +
+  geom_hline(yintercept=0,linetype="dashed")+
+  theme_few()
+
+
+#Obs 
+plotAllNew(myfolder = "Obs", mytaxa = "amphibians")
+amphis <- testAllNew(myfolder = "Obs", mytaxa = "amphibians")
+plotAllNew(myfolder = "Obs", mytaxa = "plants")
+plants <- testAllNew(myfolder = "Obs", mytaxa = "plants")
+plotAllNew(myfolder = "Obs", mytaxa = "birds")
+birds <- testAllNew(myfolder = "Obs", mytaxa = "birds")
+plotAllNew(myfolder = "Obs", mytaxa = "butterflies")
+butts <- testAllNew(myfolder = "Obs", mytaxa = "butterflies")
+allDF <- bind_rows(amphis, plants, birds, butts)
+allDF$type <- factor(allDF$type, levels = c("total recorders","prop new recorders",
+                                            "total sites", "prop new sites",
+                                            "urban cover"))
+
+Obs <- ggplot(allDF)+
+  geom_col(aes(x=taxa,y=cor))+
+  facet_wrap(~type,nrow=1)+
+  coord_flip()+
+  xlab("taxa group") + ylab("correlation with annual bias") +
+  geom_hline(yintercept=0,linetype="dashed")+
+  theme_few()
+
+cowplot::plot_grid(NG,GBIF,Obs,
+                   ncol=1,
+                   labels=c("A - Naturgucker",
+                            "B - GBIF",
+                            "C - Observation.org"),
+                   align = "v",
+                   scale = c(0.85,0.85,0.85),
+                   vjust = c(0.95,0.95,0.95), 
+                   hjust = c(-0.5,-0.8,-0.4))
+
+#ggsave("realworldBias_urban_causes_revision.png",width=13,height=9)
+ggsave("realworldBias_urban_causes_revision_2000on.png",width=13,height=9)
+
+#### annual change ####
 
 #naturgucker
 AnnualDifferences_DF <- getAnnualDifferences(myfolder = "NG", mytaxa = "amphibians")
@@ -296,18 +392,20 @@ cowplot::plot_grid(NG,GBIF,Obs,
 #ggsave("realworldBias_urban_changecauses_revision.png",width=13,height=9)
 ggsave("realworldBias_urban_changecauses_revision_2000on.png",width=13,height=9)
 
+#### differences ####
 
-#annual associations
-
-#naturgucker
-plotAllNew(myfolder = "NG", mytaxa = "amphibians")
-amphis <- testAllNew(myfolder = "NG", mytaxa = "amphibians")
-plotAllNew(myfolder = "NG", mytaxa = "plants")
-plants <- testAllNew(myfolder = "NG", mytaxa = "plants")
-plotAllNew(myfolder = "NG", mytaxa = "birds")
-birds <- testAllNew(myfolder = "NG", mytaxa = "birds")
-plotAllNew(myfolder = "NG", mytaxa = "butterflies")
-butts <- testAllNew(myfolder = "NG", mytaxa = "butterflies")
+AnnualDifferences_DF <- getAnnualDifferences(myfolder = "NG", mytaxa = "amphibians")
+plotAnnualDifferences(AnnualDifferences_DF, type="diff")
+amphis <- testAnnualDifferences(AnnualDifferences_DF, type="diff") %>% add_column(taxa="amphis")
+AnnualDifferences_DF <- getAnnualDifferences(myfolder = "NG", mytaxa = "plants")
+plotAnnualDifferences(AnnualDifferences_DF, type="diff")
+plants<- testAnnualDifferences(AnnualDifferences_DF, type="diff")%>% add_column(taxa="plants")
+AnnualDifferences_DF <- getAnnualDifferences(myfolder = "NG", mytaxa = "birds")
+plotAnnualDifferences(AnnualDifferences_DF, type="diff")
+birds <- testAnnualDifferences(AnnualDifferences_DF, type="diff")%>% add_column(taxa="birds")
+AnnualDifferences_DF <- getAnnualDifferences(myfolder = "NG", mytaxa = "butterflies")
+plotAnnualDifferences(AnnualDifferences_DF, type="diff")
+butts <- testAnnualDifferences(AnnualDifferences_DF, type="diff")%>% add_column(taxa="butterflies")
 allDF <- bind_rows(amphis, plants, birds, butts)
 allDF$type <- factor(allDF$type, levels = c("total recorders","prop new recorders",
                                             "total sites", "prop new sites",
@@ -323,14 +421,18 @@ NG <- ggplot(allDF)+
 
 
 #GBIF
-plotAllNew(myfolder = "GBIF", mytaxa = "amphibians")
-amphis <- testAllNew(myfolder = "GBIF", mytaxa = "amphibians")
-plotAllNew(myfolder = "GBIF", mytaxa = "plants")
-plants <- testAllNew(myfolder = "GBIF", mytaxa = "plants")
-plotAllNew(myfolder = "GBIF", mytaxa = "birds")
-birds <- testAllNew(myfolder = "GBIF", mytaxa = "birds")
-plotAllNew(myfolder = "GBIF", mytaxa = "butterflies")
-butts <- testAllNew(myfolder = "GBIF", mytaxa = "butterflies")
+AnnualDifferences_DF <- getAnnualDifferences(myfolder = "GBIF", mytaxa = "amphibians")
+plotAnnualDifferences(AnnualDifferences_DF, type="diff")
+amphis <- testAnnualDifferences(AnnualDifferences_DF, type="diff") %>% add_column(taxa="amphis")
+AnnualDifferences_DF <- getAnnualDifferences(myfolder = "GBIF", mytaxa = "plants")
+plotAnnualDifferences(AnnualDifferences_DF, type="diff")
+plants<- testAnnualDifferences(AnnualDifferences_DF, type="diff")%>% add_column(taxa="plants")
+AnnualDifferences_DF <- getAnnualDifferences(myfolder = "GBIF", mytaxa = "birds")
+plotAnnualDifferences(AnnualDifferences_DF, type="diff")
+birds <- testAnnualDifferences(AnnualDifferences_DF, type="diff")%>% add_column(taxa="birds")
+AnnualDifferences_DF <- getAnnualDifferences(myfolder = "GBIF", mytaxa = "butterflies")
+plotAnnualDifferences(AnnualDifferences_DF, type="diff")
+butts <- testAnnualDifferences(AnnualDifferences_DF, type="diff")%>% add_column(taxa="butterflies")
 allDF <- bind_rows(amphis, plants, birds, butts)
 allDF$type <- factor(allDF$type, levels = c("total recorders","prop new recorders",
                                             "total sites", "prop new sites",
@@ -344,16 +446,19 @@ GBIF <- ggplot(allDF)+
   geom_hline(yintercept=0,linetype="dashed")+
   theme_few()
 
-
-#Obs 
-plotAllNew(myfolder = "Obs", mytaxa = "amphibians")
-amphis <- testAllNew(myfolder = "Obs", mytaxa = "amphibians")
-plotAllNew(myfolder = "Obs", mytaxa = "plants")
-plants <- testAllNew(myfolder = "Obs", mytaxa = "plants")
-plotAllNew(myfolder = "Obs", mytaxa = "birds")
-birds <- testAllNew(myfolder = "Obs", mytaxa = "birds")
-plotAllNew(myfolder = "Obs", mytaxa = "butterflies")
-butts <- testAllNew(myfolder = "Obs", mytaxa = "butterflies")
+#Obs
+AnnualDifferences_DF <- getAnnualDifferences(myfolder = "Obs", mytaxa = "amphibians")
+plotAnnualDifferences(AnnualDifferences_DF, type="diff")
+amphis <- testAnnualDifferences(AnnualDifferences_DF, type="diff") %>% add_column(taxa="amphis")
+AnnualDifferences_DF <- getAnnualDifferences(myfolder = "Obs", mytaxa = "plants")
+plotAnnualDifferences(AnnualDifferences_DF, type="diff")
+plants<- testAnnualDifferences(AnnualDifferences_DF, type="diff")%>% add_column(taxa="plants")
+AnnualDifferences_DF <- getAnnualDifferences(myfolder = "Obs", mytaxa = "birds")
+plotAnnualDifferences(AnnualDifferences_DF, type="diff")
+birds <- testAnnualDifferences(AnnualDifferences_DF, type="diff")%>% add_column(taxa="birds")
+AnnualDifferences_DF <- getAnnualDifferences(myfolder = "Obs", mytaxa = "butterflies")
+plotAnnualDifferences(AnnualDifferences_DF, type="diff")
+butts <- testAnnualDifferences(AnnualDifferences_DF, type="diff")%>% add_column(taxa="butterflies")
 allDF <- bind_rows(amphis, plants, birds, butts)
 allDF$type <- factor(allDF$type, levels = c("total recorders","prop new recorders",
                                             "total sites", "prop new sites",
@@ -377,7 +482,6 @@ cowplot::plot_grid(NG,GBIF,Obs,
                    vjust = c(0.95,0.95,0.95), 
                    hjust = c(-0.5,-0.8,-0.4))
 
-#ggsave("realworldBias_urban_causes_revision.png",width=13,height=9)
-ggsave("realworldBias_urban_causes_revision_2000on.png",width=13,height=9)
+ggsave("realworldBias_urban_diffcauses_revision.png",width=13,height=9)
 
 ### end ####
