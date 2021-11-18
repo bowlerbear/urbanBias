@@ -24,7 +24,7 @@ getInteractionBiasSpace <- function(myfolder, mytaxa){
   samplingIntensity_subset <- samplingIntensity %>%
                                 dplyr::group_by(Year) %>%
                                 dplyr::mutate(sample = ifelse(1:n() %in% 
-                                                                sample(1:n(),500),1,0)) %>%
+                                                                sample(1:n(),1000),1,0)) %>%
                                 dplyr::filter(sample==1)
 
   
