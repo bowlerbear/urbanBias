@@ -27,7 +27,7 @@ getAnnualBiasSpace <- function(myfolder, mytaxa){
     
     tempData <- samplingIntensity[samplingIntensity$Year == y,]
     
-    randomSample <- sample(1:nrow(tempData),100)
+    randomSample <- sample(1:nrow(tempData),4000)
     dat <- tempData[randomSample,]
     #model1 <- glm(Visited ~ urban, family= binomial, data = dat)
     #model_coefs <- broom::tidy(model1)
