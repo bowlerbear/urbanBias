@@ -102,6 +102,8 @@ amphisR <- ggplot(modelCoefs)+
   scale_x_continuous(labels=c(1992,2002,2012),breaks=c(1992,2002,2012))
 
 
+amphisUrban <- plot_grid(amphisL,amphisR)
+
 #### butterflies ####
 
 samplingIntensity <- readRDS("C:/Users/db40fysa/Nextcloud/sMon/sMon-Analyses/GBIF_data/Butterflies/surveys_butterflies.rds")
@@ -377,7 +379,7 @@ amphisR <- ggplot(modelCoefs)+
         axis.text = element_text(size=12))+
   scale_x_continuous(labels=c(1992,2002,2012),breaks=c(1992,2002,2012))
 
-amphis <- plot_grid(amphisL,amphisR,nrow=1)
+amphis <- amphisPA <- plot_grid(amphisL,amphisR,nrow=1)
 
 ### butterflies #############
 
@@ -862,3 +864,15 @@ plot_grid(amphis,butt,birds,
           vjust = c(0.95,0.95,0.95), hjust = c(-0.5,-0.5,-0.75))
 
 ggsave("plots/realworldBias_environChange.png",width=9.3,height=9)
+
+
+
+### just amphibian data #####
+
+plot_grid(amphisUrban,
+          amphisPA,
+          labels=c("a)","b)"),
+          ncol=1)
+ggsave("plots/amphis_SI_Landesamtdata.png",width=8.5,height=5.7)
+
+### end ####
