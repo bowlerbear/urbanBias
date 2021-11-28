@@ -65,6 +65,82 @@ ggsave("realworldBias_TS_revision.png",width=9.3,height=9.5)
 
 ###plot urban bias ####
 
+plotUrbanBias <- function(myfolder,mytaxa){
+  
+  samplingIntensity <- readRDS(paste0(myfolder,"/surveys_revision_",myfolder,"_",mytaxa,".rds"))
+  
+  samplingIntensity <- samplingIntensity %>% as_tibble()
+  
+  #put numbers in 2 -year periods
+  samplingIntensity$x <- mtbqsDF$x[match(samplingIntensity$MTB_Q,mtbqsDF$MTB_Q)]
+  samplingIntensity$y <- mtbqsDF$y[match(samplingIntensity$MTB_Q,mtbqsDF$MTB_Q)]
+  samplingIntensity$Year2 <- samplingIntensity$Year
+  samplingIntensity$Year2 [samplingIntensity$Year2 %% 2 == 1] <- samplingIntensity$Year2 [samplingIntensity$Year2 %% 2 == 1] + 1
+  samplingIntensity_Group <- samplingIntensity %>%
+    dplyr::group_by(MTB_Q,Year2) %>%
+    dplyr::summarise(Visited = max(Visited),
+                     urban = median(urban))
+  
+  #left plot
+  buttL <- ggplot(samplingIntensity_Group,
+                  aes(x=urban*100,y=Visited,group=Year2))+
+    stat_smooth(aes(color=Year2),
+                method = "glm", 
+                method.args = list(family = "binomial"),
+                size=1.5,
+                se=FALSE)+
+    theme_few()+
+    ylim(0,1)+
+    theme(legend.position="none",
+          axis.title = element_text(size = 12),
+          axis.text = element_text(size=10))+
+    scale_color_viridis_c("Year")+
+    xlab("Urban cover (%)")+ylab("Visit probability")
+  
+  #right plot
+  myYears <- sort(unique(samplingIntensity$Year))
+  
+  #using glm
+  modelCoefs <- plyr::ldply(myYears,function(y){
+    
+    tempData <- samplingIntensity[samplingIntensity$Year == y,]
+    
+    if(sum(tempData$Visited)>10){
+      glm1 <- glm(Visited ~ urban, family= binomial, data = tempData)
+      glmConfint <- confint(glm1)
+      data.frame(Year = y, 
+                 estimate=summary(glm1)$coefficients[2,1],
+                 lower=glmConfint[2,1],
+                 upper=glmConfint[2,2])}
+    
+    else{
+      data.frame(Year = y, 
+                 estimate=NA,
+                 lower=NA,
+                 upper=NA)
+    }
+    
+  })
+  
+  
+  buttR <- ggplot(modelCoefs)+
+    geom_crossbar(aes(x = Year, y = estimate, 
+                      ymax = upper, ymin = lower, fill=Year))+
+    geom_hline(yintercept = 0, colour="red", linetype="dashed")+
+    theme_few()+ylab("Effect of urban cover")+
+    scale_fill_viridis_c("Year")+
+    theme(legend.position = "none",
+          axis.title = element_text(size = 12),
+          axis.text = element_text(size=10))+
+    scale_x_continuous(labels=c(1992,2002,2012),breaks=c(1992,2002,2012))
+  
+  
+  cowplot::plot_grid(buttL,buttR,nrow=1)
+  
+  
+}
+
+
 #plants
 p1 <- plotUrbanBias(myfolder = "NG",mytaxa ="plants")
 p2 <- plotUrbanBias(myfolder = "Obs",mytaxa ="plants")
@@ -210,6 +286,22 @@ write.csv(allDF,file="urban_tests.csv",row.names=FALSE)
 # urban cover of newly visited sites
 # urban cover of sites visited by new recorders
 # urban change in sites that are sampled in all time periods vs only old samples vs new #samples
+
+#### urban effect ####
+
+urbanchangeEffect(myfolder = "GBIF", mytaxa = "amphibians")
+urbanchangeEffect(myfolder = "GBIF", mytaxa = "plants")
+urbanchangeEffect(myfolder = "GBIF", mytaxa = "birds")
+urbanchangeEffect(myfolder = "GBIF", mytaxa = "butterflies")
+urbanchangeEffect(myfolder = "NG", mytaxa = "amphibians")
+urbanchangeEffect(myfolder = "NG", mytaxa = "plants")
+urbanchangeEffect(myfolder = "NG", mytaxa = "birds")
+urbanchangeEffect(myfolder = "NG", mytaxa = "butterflies")
+urbanchangeEffect(myfolder = "Obs", mytaxa = "amphibians")
+urbanchangeEffect(myfolder = "Obs", mytaxa = "plants")
+urbanchangeEffect(myfolder = "Obs", mytaxa = "birds")
+urbanchangeEffect(myfolder = "Obs", mytaxa = "butterflies")
+
 
 #### annual ####
 plotAllTS(myfolder = "GBIF", mytaxa = "amphibians")
@@ -483,5 +575,33 @@ cowplot::plot_grid(NG,GBIF,Obs,
                    hjust = c(-0.5,-0.8,-0.4))
 
 ggsave("realworldBias_urban_diffcauses_revision.png",width=13,height=9)
+
+### prop yearly samples ####
+
+p1 <- testpropYears(myfolder = "NG",mytaxa ="plants")
+p2 <- testpropYears(myfolder = "Obs",mytaxa ="plants")
+p3 <- testpropYears(myfolder = "GBIF",mytaxa ="plants")
+plants <- bind_rows(p1,p2,p3)
+
+#birds
+p1 <- testpropYears(myfolder = "NG",mytaxa ="birds")
+p2 <- testpropYears(myfolder = "Obs",mytaxa ="birds")
+p3 <- testpropYears(myfolder = "GBIF",mytaxa ="birds")
+birds <- bind_rows(p1,p2,p3)
+
+#butterflies
+p1 <- testpropYears(myfolder = "NG",mytaxa ="butterflies")
+p2 <- testpropYears(myfolder = "Obs",mytaxa ="butterflies")
+p3 <- testpropYears(myfolder = "GBIF",mytaxa ="butterflies")
+butts <- bind_rows(p1,p2,p3)
+
+#amphibians
+p1 <- testpropYears(myfolder = "NG",mytaxa ="amphibians")
+p2 <- testpropYears(myfolder = "Obs",mytaxa ="amphibians")
+p3 <- testpropYears(myfolder = "GBIF",mytaxa ="amphibians")
+amphis <- bind_rows(p1,p2,p3)
+
+allDF <- bind_rows(plants,birds,butts,amphis) %>%
+          filter(term!="(Intercept)")
 
 ### end ####
