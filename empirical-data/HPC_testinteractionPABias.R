@@ -23,14 +23,22 @@ getInteractionBiasSpace <- function(myfolder, mytaxa){
   
   samplingIntensity <- subset(samplingIntensity,!is.na(x))
   
+  #reduce by a quarter
+  samplingIntensity$MTB <- sapply(as.character(samplingIntensity$MTB_Q),function(x){
+    len <- nchar(x)
+    substr(x,1,(len-1))})
+  
   #take a sample of 500 MTBQs per year
   samplingIntensity_subset <- samplingIntensity %>%
                                 dplyr::group_by(Year) %>%
+                                dplyr::filter(!duplicated(MTB)) %>%
+                                dplyr::filter(Year>2000) %>%
                                 dplyr::mutate(sample = ifelse(1:n() %in% 
                                                                 sample(1:n(),1000),1,0)) %>%
                                 dplyr::filter(sample==1)
 
   
+  nrow(samplingIntensity_subset)
   
   #fit spatial model
   library(spaMM)
