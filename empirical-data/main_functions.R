@@ -911,3 +911,98 @@ plotPABias <- function(myfolder,mytaxa){
   
   
 }
+
+groupYears <- function(df){
+  
+  if(("Year" %in% names(df)) & (!"year" %in% names(df))){
+    names(df)[which(names(df)=="Year")] <- "year"
+  }
+    
+  df$yearGroup <- NA
+  df$yearGroup[df$year %in% c(2004:2008)] <- "2004-2008"
+  df$yearGroup[df$year %in% c(2009:2013)] <- "2009-2013"
+  df$yearGroup[df$year %in% c(2014:2018)] <- "2014-2018"
+
+  return(subset(df,!is.na(yearGroup)))
+  
+}
+
+
+urbanchangeEffect <- function(myfolder,mytaxa){
+  
+  samplingIntensity <- readRDS(paste0(myfolder,"/surveys_revision_",myfolder,"_",mytaxa,".rds")) %>%
+      dplyr::filter(Year>2003) %>%
+      dplyr::group_by(MTB_Q) %>%
+      dplyr::summarise(urbanChange = max(urban) - min(urban),
+                       visits = sum(Visited))
+    
+    cor(samplingIntensity$urbanChange,samplingIntensity$visits)
+    
+}
+
+
+testpropYears <- function(myfolder,mytaxa){
+  
+  samplingIntensity <- readRDS(paste0(myfolder,"/surveys_revision_",myfolder,"_",mytaxa,".rds"))
+  
+  samplingIntensity <- samplingIntensity %>% as_tibble()
+  
+  
+  samplingIntensity_Summary <- samplingIntensity %>%
+    dplyr::group_by(MTB_Q) %>%
+    dplyr::summarise(totalVisits = sum(Visited),
+                     urbanTrend = urban[Year==2018]-urban[Year==1992])
+  
+  model1 <- glm(cbind(totalVisits, 27-totalVisits) ~ log(urbanTrend+1), 
+                family= binomial, 
+                data = samplingIntensity_Summary)
+  mod1 <- broom::tidy(model1)
+  
+  mod1 %>% add_column(dataset=myfolder,taxa=mytaxa)
+  
+}
+
+# # get number of newly visited sites
+# newSites <- readMTBQs(myfolder, mytaxa)
+# newSites <- groupYears(newSites)
+# newSites <- newSites %>% 
+#             dplyr::group_by(yearGroup) %>%
+#             dplyr::summarise(meanTotalMTBs = mean(totalMTBQs),
+#                              propNewMTBQs= sum(firstyearMTBQs)/sum(totalMTBQs))
+# 
+# # get number of new recorders 
+# newRecorders <- readRecorders(myfolder, mytaxa)
+# newRecorders <- groupYears(newRecorders)
+# newRecorders <- newRecorders %>% 
+#   dplyr::group_by(yearGroup) %>%
+#   dplyr::summarise(meanTotalObs = mean(totalObs),
+#                    propNewObs= sum(firstyearObs)/sum(totalObs))
+# 
+# # urban cover of newly visited sites
+# 
+# # get urban cover change
+# samplingIntensity <- readRDS(paste0(myfolder,"/surveys_revision_",myfolder,"_",mytaxa,".rds")) %>%
+#                       dplyr::group_by(MTB_Q) %>%
+#                       dplyr::mutate(firstYear = min(Year[Visited==1])) %>%
+#                       dplyr::mutate(firstYearGroup0 = ifelse(firstYear < 2004, "sampled now","not yet"),
+#                                     firstYearGroup1 = ifelse(firstYear %in% 2004:2008, "sampled now", 
+#                                                              ifelse(firstYear <2004, "sampled before", "not yet")),
+#                                     firstYearGroup2 = ifelse(firstYear %in% 2009:2013, "sampled now", 
+#                                                              ifelse(firstYear <2008, "sampled before", "not yet")),
+#                                     firstYearGroup3 = ifelse(firstYear %in% 2014:2018, "sampled now", 
+#                                                       ifelse(firstYear <2008, "sampled before", "not yet")))
+#   
+# groupMeans <- samplingIntensity %>%
+#                       select(firstYearGroup0,firstYearGroup1,firstYearGroup2,firstYearGroup3,urban) %>%
+#                       pivot_longer(., cols=starts_with("firstYear"), names_to="yearGroup", values_to="type") %>%
+#                       dplyr::group_by(yearGroup,type) %>%
+#                       dplyr::summarise(meanUrban = mean(urban))
+#   
+# groupMeans$type <- factor(groupMeans$type, levels = c("never","sampled before", "sampled now", "not yet"))
+# groupMeans$yearGroup <- factor(groupMeans$yearGroup)
+# levels(groupMeans$yearGroup) <- c("before 2004","2004-2008","2009-2013","2014-2018")
+# 
+# ggplot(groupMeans)+
+#   geom_col(aes(x=yearGroup,y=meanUrban,fill=type),position="dodge")
+
+# urban change in sites that are sampled in all time periods vs only old samples vs new #samples
