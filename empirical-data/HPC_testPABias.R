@@ -25,7 +25,7 @@ getAnnualBiasSpace <- function(myfolder, mytaxa, myyear){
   
   #get data for one year and take a random sample
   tempData <- samplingIntensity[samplingIntensity$Year == as.numeric(myyear),]
-  randomSample <- sample(1:nrow(tempData),4000)
+  randomSample <- sample(1:nrow(tempData),5000)
   dat <- tempData[randomSample,]
   
   if(sum(dat$Visited)>5){
