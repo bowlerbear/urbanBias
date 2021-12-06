@@ -61,25 +61,25 @@ plotUrbanBias <- function(myfolder,mytaxa){
 p1 <- plotUrbanBias(myfolder = "NG",mytaxa ="plants")
 p2 <- plotUrbanBias(myfolder = "Obs",mytaxa ="plants")
 p3 <- plotUrbanBias(myfolder = "GBIF",mytaxa ="plants")
-plantsSI <- plot_grid(p1,p3,nrow=1)
+plantsSI <- plot_grid(p1,p2,p3,nrow=1)
 
 #birds
 p1 <- plotUrbanBias(myfolder = "NG",mytaxa ="birds")
 p2 <- plotUrbanBias(myfolder = "Obs",mytaxa ="birds")
 p3 <- plotUrbanBias(myfolder = "GBIF",mytaxa ="birds")
-birdsSI <- plot_grid(p1,p3,nrow=1)
+birdsSI <- plot_grid(p1,p2,p3,nrow=1)
 
 #butterflies
 p1 <- plotUrbanBias(myfolder = "NG",mytaxa ="butterflies")
 p2 <- plotUrbanBias(myfolder = "Obs",mytaxa ="butterflies")
 p3 <- plotUrbanBias(myfolder = "GBIF",mytaxa ="butterflies")
-buttsSI <- plot_grid(p1,p3,nrow=1)
+buttsSI <- plot_grid(p1,p2,p3,nrow=1)
 
 #amphibians
 p1 <- plotUrbanBias(myfolder = "NG",mytaxa ="amphibians")
 p2 <- plotUrbanBias(myfolder = "Obs",mytaxa ="amphibians")
 p3 <- plotUrbanBias(myfolder = "GBIF",mytaxa ="amphibians")
-amphisSI <- plot_grid(p1,p3,nrow=1)
+amphisSI <- plot_grid(p1,p2,p3,nrow=1)
 
 #main text
 
@@ -94,18 +94,18 @@ plot_grid(amphisSI,buttsSI,birdsSI,plantsSI,
           vjust = c(0.95,0.95,0.95,0.95), 
           hjust = c(-0.35,-0.35,-0.5,-0.5))
 
-ggsave("plots/annual_urban_spaMM.png",width=6,height=9)
+ggsave("plots/annual_urban_spaMM.png",width=8,height=9)
 
 ### urban interaction ####
 
-modelFiles <- list.files("model-outputs/round2")
+modelFiles <- list.files("model-outputs")
 
 modelFiles_subset <- modelFiles %>% 
   str_subset("interactionBiasSpace_") %>% 
   str_subset("PAarea", negate=TRUE)
 
 allModels <- lapply(modelFiles_subset, function(x){
-  temp <- readRDS(paste("model-outputs/round2",x,sep="/"))
+  temp <- readRDS(paste("model-outputs",x,sep="/"))
   temp$Files <- x
   temp$dataset <- strsplit(temp$Files,"_")[[1]][2]
   temp$taxa <- strsplit(temp$Files,"_")[[1]][3]
@@ -115,7 +115,39 @@ allModels <- lapply(modelFiles_subset, function(x){
 allModels <- do.call(rbind,allModels)
 allModels
 
+allModels <- allModels %>%
+              mutate(across(where(is.numeric), round, 3))
+
+write.csv(allModels,"plots/urban_interaction.csv",row.names = FALSE)
+
+### urban main ####
+
+modelFiles <- list.files("model-outputs")
+
+modelFiles_subset <- modelFiles %>% 
+  str_subset("mainBiasSpace") %>%
+  str_subset("PAarea", negate=TRUE)
+
+allModels <- lapply(modelFiles_subset, function(x){
+  temp <- readRDS(paste("model-outputs",x,sep="/"))
+  temp$Files <- x
+  temp$dataset <- strsplit(temp$Files,"_")[[1]][2]
+  temp$taxa <- strsplit(temp$Files,"_")[[1]][3]
+  temp$taxa <- gsub(".rds","",temp$taxa)
+  return(temp)
+})
+allModels <- do.call(rbind,allModels)
+allModels
+
+allModels <- allModels %>%
+  mutate(across(where(is.numeric), round, 3))
+
+
+write.csv(allModels,"plots/urban_main.csv",row.names = FALSE)
+
 ### annual PA area ####
+
+modelFiles <- list.files("model-outputs")
 
 modelFiles_subset <- modelFiles %>% 
   str_subset("annualBiasSpace_") %>% 
@@ -157,25 +189,25 @@ plotBias <- function(myfolder,mytaxa){
 p1 <- plotBias(myfolder = "NG",mytaxa ="plants")
 p2 <- plotBias(myfolder = "Obs",mytaxa ="plants")
 p3 <- plotBias(myfolder = "GBIF",mytaxa ="plants")
-plantsSI <- plot_grid(p1,p3,nrow=1)
+plantsSI <- plot_grid(p1,p2,p3,nrow=1)
 
 #birds
 p1 <- plotBias(myfolder = "NG",mytaxa ="birds")
 p2 <- plotBias(myfolder = "Obs",mytaxa ="birds")
 p3 <- plotBias(myfolder = "GBIF",mytaxa ="birds")
-birdsSI <- plot_grid(p1,p3,nrow=1)
+birdsSI <- plot_grid(p1,p2,p3,nrow=1)
 
 #butterflies
 p1 <- plotBias(myfolder = "NG",mytaxa ="butterflies")
 p2 <- plotBias(myfolder = "Obs",mytaxa ="butterflies")
 p3 <- plotBias(myfolder = "GBIF",mytaxa ="butterflies")
-buttsSI <- plot_grid(p1,p3,nrow=1)
+buttsSI <- plot_grid(p1,p2,p3,nrow=1)
 
 #amphibians
 p1 <- plotBias(myfolder = "NG",mytaxa ="amphibians")
 p2 <- plotBias(myfolder = "Obs",mytaxa ="amphibians")
 p3 <- plotBias(myfolder = "GBIF",mytaxa ="amphibians")
-amphisSI <- plot_grid(p1,p3,nrow=1)
+amphisSI <- plot_grid(p1,p2,p3,nrow=1)
 
 #main text
 
@@ -190,25 +222,56 @@ plot_grid(amphisSI,buttsSI,birdsSI,plantsSI,
           vjust = c(0.95,0.95,0.95,0.95), 
           hjust = c(-0.35,-0.35,-0.5,-0.5))
 
-ggsave("plots/annual_PAarea_spaMM.png",width=6,height=9)
+ggsave("plots/annual_PAarea_spaMM.png",width=8,height=9)
 
 ### PA area interaction ####
 
-modelFiles <- list.files("model-outputs/round2")
+modelFiles <- list.files("model-outputs")
 
 modelFiles_subset <- modelFiles %>% 
   str_subset("interactionBiasSpace_PAarea") 
 
 allModels <- lapply(modelFiles_subset, function(x){
-  temp <- readRDS(paste("model-outputs/round2",x,sep="/"))
+  temp <- readRDS(paste("model-outputs",x,sep="/"))
   temp$Files <- x
-  temp$dataset <- strsplit(temp$Files,"_")[[1]][2]
-  temp$taxa <- strsplit(temp$Files,"_")[[1]][3]
+  temp$dataset <- strsplit(temp$Files,"_")[[1]][3]
+  temp$taxa <- strsplit(temp$Files,"_")[[1]][4]
   temp$taxa <- gsub(".rds","",temp$taxa)
   return(temp)
 })
 allModels <- do.call(rbind,allModels)
 allModels
+
+allModels <- allModels %>%
+  mutate(across(where(is.numeric), round, 3))
+
+
+write.csv(allModels,"plots/paArea_interaction.csv",row.names = FALSE)
+
+### PA main ####
+
+modelFiles <- list.files("model-outputs")
+
+modelFiles_subset <- modelFiles %>% 
+  str_subset("mainBiasSpace_PAarea") 
+
+allModels <- lapply(modelFiles_subset, function(x){
+  temp <- readRDS(paste("model-outputs",x,sep="/"))
+  temp$Files <- x
+  temp$dataset <- strsplit(temp$Files,"_")[[1]][3]
+  temp$taxa <- strsplit(temp$Files,"_")[[1]][4]
+  temp$taxa <- gsub(".rds","",temp$taxa)
+  return(temp)
+})
+allModels <- do.call(rbind,allModels)
+allModels
+
+allModels <- allModels %>%
+  mutate(across(where(is.numeric), round, 3))
+
+
+write.csv(allModels,"plots/paArea_main.csv",row.names = FALSE)
+
 
 ### test prop years ####
 
@@ -227,6 +290,8 @@ allModels <- lapply(modelFiles_subset, function(x){
 })
 allModels <- do.call(rbind,allModels)
 allModels
+
+write.csv(allModels,file="plots/testPropyears.csv")
 
 ### end ####
 
