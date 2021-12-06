@@ -8,17 +8,10 @@ library(mgcv)
 ### environ datasets ####
 
 #localPC
-#load("C:/Users/db40fysa/Nextcloud/sMon/sMon-Analyses/Odonata_Git/sMon-insects/mtbqsDF.RData")
+load("C:/Users/db40fysa/Nextcloud/sMon/sMon-Analyses/Odonata_Git/sMon-insects/mtbqsDF.RData")
 
 #or rstudio server
-load("/data/dbowler/Odonata/data/mtbqsDF.RData")
-
-### set wd ####
-
-#local PC
-#setwd("C:/Users/db40fysa/Nextcloud/sMon/sMon-Analyses/GBIF_other_data/urbanBias_datasets")
-
-setwd("/data/dbowler/urbanBias")
+#load("/data/dbowler/Odonata/data/mtbqsDF.RData")
 
 ### functions #####
 
@@ -27,6 +20,14 @@ source("empirical-data/main_functions.R")
 ### PA data ######
 
 protectedArea <- readRDS("empirical-data/protectedarea_MTBQ.rds")
+
+### set wd ####
+
+#local PC
+setwd("C:/Users/db40fysa/Nextcloud/sMon/sMon-Analyses/GBIF_other_data/urbanBias_datasets")
+
+#setwd("/data/dbowler/urbanBias")
+
 
 ### plot pa bias ####
 
